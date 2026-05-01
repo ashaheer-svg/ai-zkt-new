@@ -40,13 +40,23 @@
   <a href="index.php?page=disbursements&app_id=<?= $app['id'] ?>" class="btn btn-outline">💰 Disbursements</a>
   <?php endif; ?>
 
+  <?php if ($auth->hasRole([ROLE_OVERALL_INCHARGE,ROLE_SYSADMIN])): ?>
+  <button onclick="document.getElementById('revertPanel').style.display='block'" class="btn btn-outline">↩️ Push Back</button>
+  <?php endif; ?>
+
   <?php if ($auth->hasRole(ROLE_VERIFICATION)): ?>
   <button onclick="document.getElementById('commentPanel').style.display='block'" class="btn btn-outline">💬 Add Comment</button>
   <?php endif; ?>
 </div>
 
 <!-- Inline action panels -->
-<?php foreach (['reviewPanel'=>['Review Application','decision','review'],'approvePanel'=>['Approve Application','decision','approve'],'rejectPanel'=>['Reject Application','reject','reject'],'commentPanel'=>['Advisory Comment','comment','comment']] as $panelId => [$title,$field,$actionPage]): ?>
+<?php foreach ([
+    'reviewPanel'=>['Review Application','decision','review'],
+    'approvePanel'=>['Approve Application','decision','approve'],
+    'rejectPanel'=>['Reject Application','reject','reject'],
+    'revertPanel'=>['Push Back to Unvalidated','comment','revert'],
+    'commentPanel'=>['Advisory Comment','comment','comment']
+  ] as $panelId => [$title,$field,$actionPage]): ?>
 <div id="<?= $panelId ?>" style="display:none" class="panel mb-2">
   <div class="panel-title"><?= $title ?></div>
   <form method="POST" action="index.php?page=applications.<?= $actionPage ?>">

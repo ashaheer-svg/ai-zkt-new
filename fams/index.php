@@ -80,6 +80,7 @@ match (true) {
     $page === 'applications.review'    => ApplicationController::review($pdo, $auth, $logger),
     $page === 'applications.approve'   => ApplicationController::approve($pdo, $auth, $logger),
     $page === 'applications.reject'    => ApplicationController::reject($pdo, $auth, $logger),
+    $page === 'applications.revert'    => ApplicationController::revert($pdo, $auth, $logger),
     $page === 'applications.privilege' => ApplicationController::setPrivileged($pdo, $auth, $logger),
     $page === 'applications.upload'    => ApplicationController::uploadDoc($pdo, $auth, $logger),
     $page === 'applications.deldoc'    => ApplicationController::deleteDoc($pdo, $auth, $logger),

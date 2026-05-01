@@ -99,15 +99,17 @@ class Auth
         if ($app['is_privileged'] && !$this->hasRole([ROLE_OVERALL_INCHARGE, ROLE_SYSADMIN])) {
             return false;
         }
-        if ($this->hasRole(ROLE_DATA_ENTRY)) {
-            return in_array($app['status'], [STATUS_DRAFT, STATUS_PENDING_VALIDATION])
+
+        $status = $app['status'];
+
+        // If not validated yet
+        if ($status === STATUS_PENDING_VALIDATION || $status === STATUS_DRAFT) {
+            return $this->hasRole([ROLE_DATA_ENTRY, ROLE_VILLAGE_INCHARGE, ROLE_SYSADMIN])
                 && $this->isInVillage((int)$app['village_id']);
         }
-        if ($this->hasRole(ROLE_VILLAGE_INCHARGE)) {
-            return in_array($app['status'], [STATUS_SUBMITTED, STATUS_UNDER_REVIEW])
-                && $this->isInVillage((int)$app['village_id']);
-        }
-        return false;
+
+        // Once validated, only 1.c (Overall Incharge) or Sysadmin can edit
+        return $this->hasRole([ROLE_OVERALL_INCHARGE, ROLE_SYSADMIN]);
     }
 
     // ── Access Guard ──────────────────────────────────────────────────────────
