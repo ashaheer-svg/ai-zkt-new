@@ -57,9 +57,13 @@
         <div class="form-group">
           <label>Relationship</label>
           <select name="dep_rel[]" class="dep-rel-select">
+            <option value="husband">Husband</option>
+            <option value="wife">Wife</option>
             <option value="child">Child</option>
             <option value="parent">Parent</option>
             <option value="grandparent">Grand Parent</option>
+            <option value="brother">Brother</option>
+            <option value="sister">Sister</option>
             <option value="other">Other</option>
           </select>
           <input type="text" name="dep_rel_other[]" class="dep-rel-other mt-1" style="display:none" placeholder="Specify relationship…">
@@ -202,7 +206,6 @@
   }
 
   // Init
-  initSpouse();
   initDependants();
   initTabs();
 })();

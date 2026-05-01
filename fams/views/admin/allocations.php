@@ -21,14 +21,19 @@
         </tr>
       </thead>
       <tbody>
-        <?php foreach ($villages as $v): 
-          $allocated = (float)$v['allocation_amount'];
-          $used = (float)$v['used_amount'];
-          $remaining = $allocated - $used;
-          $percent = $allocated > 0 ? ($used / $allocated) * 100 : 0;
-          $color = 'green';
-          if ($percent > 70) $color = 'orange';
-          if ($percent > 90) $color = 'red';
+        <?php 
+          $totalAllocated = 0;
+          $totalUsed = 0;
+          foreach ($villages as $v): 
+            $allocated = (float)$v['allocation_amount'];
+            $used = (float)$v['used_amount'];
+            $totalAllocated += $allocated;
+            $totalUsed += $used;
+            $remaining = $allocated - $used;
+            $percent = $allocated > 0 ? ($used / $allocated) * 100 : 0;
+            $color = 'green';
+            if ($percent > 70) $color = 'orange';
+            if ($percent > 90) $color = 'red';
         ?>
         <tr>
           <td data-label="Village">
@@ -60,6 +65,15 @@
         </tr>
         <?php endforeach; ?>
       </tbody>
+      <tfoot>
+        <tr style="background: rgba(0,0,0,0.02); font-weight: bold;">
+          <td>TOTAL</td>
+          <td><?= money($totalAllocated) ?></td>
+          <td><?= money($totalUsed) ?></td>
+          <td><?= money($totalAllocated - $totalUsed) ?></td>
+          <td></td>
+        </tr>
+      </tfoot>
     </table>
   </div>
 </div>

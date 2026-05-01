@@ -41,6 +41,12 @@ function _migrate(PDO $pdo): void
             $pdo->exec("ALTER TABLE applicant_dependants ADD COLUMN relationship TEXT");
         }
     }
+
+    // Add marital_status to applicants
+    $cols = $pdo->query("PRAGMA table_info(applicants)")->fetchAll(PDO::FETCH_COLUMN, 1);
+    if (!in_array('marital_status', $cols)) {
+        $pdo->exec("ALTER TABLE applicants ADD COLUMN marital_status TEXT");
+    }
 }
 
 function _createSchema(PDO $pdo): void
@@ -90,6 +96,7 @@ function _createSchema(PDO $pdo): void
             id_number  TEXT,
             telephone  TEXT,
             village_id INTEGER NOT NULL,
+            marital_status TEXT,
             notes      TEXT,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (village_id) REFERENCES villages(id)

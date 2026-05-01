@@ -95,22 +95,11 @@
       <div class="detail-item"><div class="detail-label">Age</div><div class="detail-value"><?= $applicant['age'] ?: '—' ?></div></div>
       <div class="detail-item"><div class="detail-label">ID / NIC</div><div class="detail-value"><?= e($applicant['id_number'] ?: '—') ?></div></div>
       <div class="detail-item"><div class="detail-label">Telephone</div><div class="detail-value"><?= e($applicant['telephone'] ?: '—') ?></div></div>
+      <div class="detail-item"><div class="detail-label">Marital Status</div><div class="detail-value"><?= ucfirst(e($applicant['marital_status'] ?: '—')) ?></div></div>
       <div class="detail-item"><div class="detail-label">Address</div><div class="detail-value"><?= e($applicant['address'] ?: '—') ?></div></div>
       <?php if ($applicant['notes']): ?><div class="detail-item" style="grid-column:1/-1"><div class="detail-label">Notes</div><div class="detail-value"><?= e($applicant['notes']) ?></div></div><?php endif; ?>
     </div>
   </div>
-
-  <?php if ($spouse): ?>
-  <div class="card mb-2">
-    <div class="card-title">💍 Spouse</div>
-    <div class="detail-grid">
-      <div class="detail-item"><div class="detail-label">Name</div><div class="detail-value"><?= e($spouse['full_name']) ?></div></div>
-      <div class="detail-item"><div class="detail-label">Age</div><div class="detail-value"><?= $spouse['age'] ?: '—' ?></div></div>
-      <div class="detail-item"><div class="detail-label">ID</div><div class="detail-value"><?= e($spouse['id_number']?:'—') ?></div></div>
-      <div class="detail-item"><div class="detail-label">Tel</div><div class="detail-value"><?= e($spouse['telephone']?:'—') ?></div></div>
-    </div>
-  </div>
-  <?php endif; ?>
 
   <?php if ($dependants): ?>
   <div class="card mb-2">
