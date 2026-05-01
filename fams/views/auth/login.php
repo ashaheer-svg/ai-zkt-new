@@ -16,6 +16,7 @@
         <div class="login-logo-icon">F</div>
         <h1><?= APP_SHORT ?></h1>
         <p><?= APP_NAME ?></p>
+        <p style="font-size: 10px; color: #999;">Deployment: <?= APP_DEPLOY_VERSION ?></p>
       </div>
 
       <?php if ($error): ?>
