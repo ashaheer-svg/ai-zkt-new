@@ -59,7 +59,7 @@ class ApplicationController
         $page   = max(1, (int)($_GET['p'] ?? 1));
         $result = paginate($pdo, $sql, $params, $page);
 
-        $pageTitle  = 'NCTs';
+        $pageTitle  = 'Projects';
         $activePage = 'applications';
         require __DIR__ . '/../views/applications/list.php';
     }
@@ -139,7 +139,7 @@ class ApplicationController
             }
         }
 
-        $pageTitle  = 'New NCT';
+        $pageTitle  = 'New Project';
         $activePage = 'applications';
         require __DIR__ . '/../views/applications/create.php';
     }
@@ -209,7 +209,7 @@ class ApplicationController
             }
         }
 
-        $pageTitle = 'Edit NCT #' . $id; $activePage = 'applications';
+        $pageTitle = 'Edit Project #' . $id; $activePage = 'applications';
         require __DIR__ . '/../views/applications/edit.php';
     }
 
@@ -232,7 +232,7 @@ class ApplicationController
         $stmtD = $pdo->prepare("SELECT d.*,u.full_name AS auth_name FROM disbursements d LEFT JOIN users u ON u.id=d.authorized_by WHERE d.application_id=? ORDER BY d.installment_no");
         $stmtD->execute([$id]); $disbursements = $stmtD->fetchAll();
 
-        $pageTitle = 'NCT #' . $id; $activePage = 'applications';
+        $pageTitle = 'Project #' . $id; $activePage = 'applications';
         require __DIR__ . '/../views/applications/view.php';
     }
 
@@ -291,7 +291,7 @@ class ApplicationController
             redirect('index.php?page=applications.pending');
         }
         $stmt = $pdo->prepare("SELECT * FROM applicants WHERE id=?"); $stmt->execute([$app['applicant_id']]); $applicant = $stmt->fetch();
-        $pageTitle = 'Validate NCT #'.$id; $activePage = 'pending';
+        $pageTitle = 'Validate Project #'.$id; $activePage = 'pending';
         require __DIR__ . '/../views/applications/validate.php';
     }
 

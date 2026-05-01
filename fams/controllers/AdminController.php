@@ -184,7 +184,7 @@ class AdminController
         
         $villages = $pdo->query($sql)->fetchAll();
 
-        $pageTitle = 'NCT Allocations'; 
+        $pageTitle = 'Project Allocations'; 
         $activePage = 'admin.allocations';
         require __DIR__ . '/../views/admin/allocations.php';
     }

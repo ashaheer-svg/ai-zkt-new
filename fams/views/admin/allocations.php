@@ -4,7 +4,7 @@
 <div class="header-actions mb-2">
   <div class="header-title">
     <h1>💰 Village Allocations</h1>
-    <p class="muted">Manage the total funds allocated to each village for NCTs.</p>
+    <p class="muted">Manage the total funds allocated to each village for Projects.</p>
   </div>
 </div>
 

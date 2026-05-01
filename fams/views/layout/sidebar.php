@@ -11,7 +11,7 @@ if (in_array($role,[ROLE_OVERALL_INCHARGE,ROLE_SYSADMIN])) {
 }
 
 // Applications
-$nav[] = ['page'=>'applications','icon'=>'📋','label'=>'NCTs'];
+$nav[] = ['page'=>'applications','icon'=>'📋','label'=>'Projects'];
 
 // Pending Validation
 if (in_array($role,[ROLE_DATA_ENTRY,ROLE_VILLAGE_INCHARGE,ROLE_OVERALL_INCHARGE,ROLE_SYSADMIN])) {
