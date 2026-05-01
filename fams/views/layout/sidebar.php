@@ -26,14 +26,24 @@ if (in_array($role,[ROLE_OVERALL_INCHARGE,ROLE_SYSADMIN])) {
 
 // Admin
 if ($role === ROLE_SYSADMIN) {
-    $nav[] = ['page'=>'admin.settings', 'icon'=>'⚙️','label'=>'Settings'];
-    $nav[] = ['page'=>'admin.system',   'icon'=>'🛡️','label'=>'Administration'];
-    $nav[] = ['page'=>'admin.audit',    'icon'=>'📜','label'=>'Audit Log'];
+    $nav[] = [
+        'page'  => 'admin.settings', 
+        'icon'  => '⚙️', 
+        'label' => 'Settings',
+        'sub'   => [
+            ['page'=>'admin.users',      'label'=>'Users'],
+            ['page'=>'admin.villages',   'label'=>'Villages'],
+            ['page'=>'admin.categories', 'label'=>'Fund Categories'],
+            ['page'=>'admin.allocations','label'=>'Allocations'],
+            ['page'=>'admin.system',     'label'=>'Administration'],
+            ['page'=>'admin.audit',      'label'=>'Audit Log'],
+        ]
+    ];
 }
 ?>
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-brand">
-      <div class="brand-icon">F</div>
+      <div class="brand-icon">N</div>
       <div class="brand-text">
         <span class="brand-name"><?= APP_SHORT ?></span>
         <span class="brand-sub">v<?= APP_VERSION ?></span>
@@ -50,11 +60,23 @@ if ($role === ROLE_SYSADMIN) {
 
     <nav class="sidebar-nav">
       <?php foreach ($nav as $item): ?>
-      <a href="index.php?page=<?= e($item['page']) ?>"
-         class="nav-item <?= ($activePage === $item['page']) ? 'active' : '' ?>">
-        <span class="nav-icon"><?= $item['icon'] ?></span>
-        <span class="nav-label"><?= e($item['label']) ?></span>
-      </a>
+      <div class="nav-group">
+        <a href="index.php?page=<?= e($item['page']) ?>"
+           class="nav-item <?= ($activePage === $item['page']) ? 'active' : '' ?>">
+          <span class="nav-icon"><?= $item['icon'] ?></span>
+          <span class="nav-label"><?= e($item['label']) ?></span>
+        </a>
+        <?php if (!empty($item['sub'])): ?>
+        <div class="nav-sub">
+          <?php foreach ($item['sub'] as $sub): ?>
+          <a href="index.php?page=<?= e($sub['page']) ?>" 
+             class="nav-sub-item <?= ($activePage === $sub['page']) ? 'active' : '' ?>">
+            <?= e($sub['label']) ?>
+          </a>
+          <?php endforeach; ?>
+        </div>
+        <?php endif; ?>
+      </div>
       <?php endforeach; ?>
     </nav>
 
