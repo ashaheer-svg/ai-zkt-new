@@ -312,8 +312,6 @@ class ApplicationController
         redirect('index.php?page=applications.view&id='.$id);
     }
 
-    }
-
     // ── Hold Application (1.c) ───────────────────────────────────────────────
     public static function hold(PDO $pdo, Auth $auth, Logger $logger): void
     {
