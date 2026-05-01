@@ -312,23 +312,6 @@ class ApplicationController
         redirect('index.php?page=applications.view&id='.$id);
     }
 
-    // ── Revert to Unvalidated (1.c push back) ─────────────────────────────────
-    public static function revert(PDO $pdo, Auth $auth, Logger $logger): void
-    {
-        $auth->requireRole([ROLE_OVERALL_INCHARGE, ROLE_SYSADMIN]);
-        csrf_verify();
-        $id  = (int)($_POST['id'] ?? 0);
-        $app = self::_loadApp($pdo, $id);
-        if (!$app) { flash('error','Not found.'); redirect('index.php?page=applications'); }
-        
-        $comment = trim($_POST['comment'] ?? 'Pushed back to unvalidated status.');
-        $pdo->prepare("UPDATE applications SET status=?, is_valid=0, updated_at=CURRENT_TIMESTAMP WHERE id=?")
-            ->execute([STATUS_PENDING_VALIDATION, $id]);
-        
-        $logger->appLog($id, $auth->id(), 'pushed_back', $comment);
-        $logger->activity($auth->id(), 'revert_application', 'application', $id);
-        flash('warning', 'Application pushed back to unvalidated status.');
-        redirect('index.php?page=applications.view&id='.$id);
     }
 
     // ── Hold Application (1.c) ───────────────────────────────────────────────
