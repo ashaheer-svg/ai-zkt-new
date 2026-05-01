@@ -19,7 +19,7 @@
   <button onclick="document.getElementById('reviewPanel').style.display='block'" class="btn btn-primary">🔍 Review</button>
   <?php endif; ?>
 
-  <?php if ($app['status'] === STATUS_UNDER_REVIEW && $auth->hasRole(ROLE_OVERALL_INCHARGE)): ?>
+  <?php if (in_array($app['status'], [STATUS_SUBMITTED, STATUS_UNDER_REVIEW]) && $auth->hasRole(ROLE_OVERALL_INCHARGE)): ?>
   <button onclick="document.getElementById('approvePanel').style.display='block'" class="btn btn-success">✅ Approve</button>
   <?php endif; ?>
 
