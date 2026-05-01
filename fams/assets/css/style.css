@@ -127,18 +127,36 @@ img { max-width:100%; }
 .nav-label { font-size:.875rem; font-weight:500; }
 
 /* Sub-nav */
-.nav-group { margin-bottom:.5rem; }
+.nav-group { display: flex; flex-direction: column; }
 .nav-sub {
-  background:rgba(0,0,0,.15);
-  margin-top:.25rem; padding-bottom:.5rem;
+  background: rgba(0,0,0,0.2);
+  margin-top: 2px;
+  display: flex;
+  flex-direction: column;
 }
 .nav-sub-item {
-  padding:.5rem 1.25rem .5rem 3.2rem;
-  font-size:.8rem; color:var(--text-dim);
-  display:block; transition:var(--trans);
+  padding: 0.6rem 1.25rem 0.6rem 3.2rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  display: block;
+  transition: var(--trans);
+  text-decoration: none;
 }
-.nav-sub-item:hover { color:var(--primary); }
-.nav-sub-item.active { color:var(--primary); font-weight:600; }
+.nav-sub-item:hover { background: rgba(255,255,255,0.03); color: var(--primary); }
+.nav-sub-item.active { color: var(--primary); font-weight: 600; background: rgba(20,184,166,0.05); }
+
+/* Grid Utilities */
+.grid { display: grid; gap: 1.25rem; }
+.grid-2 { grid-template-columns: repeat(2, 1fr); }
+.grid-3 { grid-template-columns: repeat(3, 1fr); }
+.grid-4 { grid-template-columns: repeat(4, 1fr); }
+
+@media (max-width: 991px) {
+  .grid-3, .grid-4 { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 600px) {
+  .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+}
 
 .sidebar-footer { padding:.75rem 0; border-top:1px solid var(--border); }
 .nav-logout:hover { color:var(--danger) !important; background:rgba(239,68,68,.08) !important; }
@@ -179,6 +197,20 @@ img { max-width:100%; }
   display:grid;
   grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
   gap:1rem;
+}
+.card-interactive {
+  cursor: pointer;
+  transition: var(--trans);
+  border: 1px solid var(--border);
+}
+.card-interactive:hover {
+  background: var(--card-hover);
+  border-color: var(--primary);
+  transform: translateY(-3px);
+  box-shadow: var(--shadow);
+}
+.card-interactive:active {
+  transform: translateY(-1px);
 }
 .stat-card {
   background:var(--card);
