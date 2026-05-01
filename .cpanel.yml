@@ -2,4 +2,5 @@
 deployment:
   tasks:
     - export DEPLOYPATH=/home/$USER/public_html/site
-    - /bin/cp -R fams/. $DEPLOYPATH
+    - /bin/mkdir -p $DEPLOYPATH
+    - /bin/rsync -avz fams/ $DEPLOYPATH
