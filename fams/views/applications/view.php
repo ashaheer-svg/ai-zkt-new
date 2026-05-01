@@ -42,10 +42,20 @@
 
   <?php if ($auth->hasRole([ROLE_OVERALL_INCHARGE,ROLE_SYSADMIN])): ?>
   <button onclick="document.getElementById('revertPanel').style.display='block'" class="btn btn-outline">↩️ Push Back</button>
+  <?php if ($app['status'] === STATUS_ON_HOLD): ?>
+  <button onclick="document.getElementById('unholdPanel').style.display='block'" class="btn btn-success">▶️ Cancel Hold</button>
+  <?php elseif ($app['is_valid']): ?>
+  <button onclick="document.getElementById('holdPanel').style.display='block'" class="btn btn-warning">⏸️ Put On Hold</button>
+  <?php endif; ?>
   <?php endif; ?>
 
-  <?php if ($auth->hasRole(ROLE_VERIFICATION)): ?>
-  <button onclick="document.getElementById('commentPanel').style.display='block'" class="btn btn-outline">💬 Add Comment</button>
+  <?php 
+    $canComment = $auth->hasRole([ROLE_OVERALL_INCHARGE, ROLE_SYSADMIN, ROLE_VERIFICATION]) 
+                  || ($app['created_by'] == $auth->id()) 
+                  || ($app['validated_by'] == $auth->id());
+    if ($canComment): 
+  ?>
+  <button onclick="document.getElementById('commentPanel').style.display='block'" class="btn btn-outline">💬 Add Note</button>
   <?php endif; ?>
 </div>
 
@@ -54,7 +64,9 @@
     'reviewPanel'=>['Review Application','decision','review'],
     'rejectPanel'=>['Reject Application','reject','reject'],
     'revertPanel'=>['Push Back to Unvalidated','comment','revert'],
-    'commentPanel'=>['Advisory Comment','comment','comment']
+    'holdPanel'=>['Put Application ON HOLD','comment','hold'],
+    'unholdPanel'=>['Cancel HOLD Status','comment','unhold'],
+    'commentPanel'=>['Add Note / Comment','comment','comment']
   ] as $panelId => [$title,$field,$actionPage]): ?>
 <div id="<?= $panelId ?>" style="display:none" class="panel mb-2">
   <div class="panel-title"><?= $title ?></div>
@@ -213,6 +225,12 @@
   </div>
 
   <!-- Upload more -->
+  <?php 
+    $canUpload = $auth->hasRole([ROLE_OVERALL_INCHARGE, ROLE_SYSADMIN]) 
+                 || ($app['created_by'] == $auth->id()) 
+                 || ($app['validated_by'] == $auth->id());
+    if ($canUpload): 
+  ?>
   <div class="card">
     <div class="card-title">📤 Upload More Documents</div>
     <form method="POST" action="index.php?page=applications.upload" enctype="multipart/form-data">
@@ -227,6 +245,7 @@
       <button type="submit" class="btn btn-primary">Upload</button>
     </form>
   </div>
+  <?php endif; ?>
 </div>
 
 <!-- Tab: Timeline -->

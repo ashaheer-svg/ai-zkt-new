@@ -312,32 +312,112 @@ class ApplicationController
         redirect('index.php?page=applications.view&id='.$id);
     }
 
+    // ── Revert to Unvalidated (1.c push back) ─────────────────────────────────
+    public static function revert(PDO $pdo, Auth $auth, Logger $logger): void
+    {
+        $auth->requireRole([ROLE_OVERALL_INCHARGE, ROLE_SYSADMIN]);
+        csrf_verify();
+        $id  = (int)($_POST['id'] ?? 0);
+        $app = self::_loadApp($pdo, $id);
+        if (!$app) { flash('error','Not found.'); redirect('index.php?page=applications'); }
+        
+        $comment = trim($_POST['comment'] ?? 'Pushed back to unvalidated status.');
+        $pdo->prepare("UPDATE applications SET status=?, is_valid=0, updated_at=CURRENT_TIMESTAMP WHERE id=?")
+            ->execute([STATUS_PENDING_VALIDATION, $id]);
+        
+        $logger->appLog($id, $auth->id(), 'pushed_back', $comment);
+        $logger->activity($auth->id(), 'revert_application', 'application', $id);
+        flash('warning', 'Application pushed back to unvalidated status.');
+        redirect('index.php?page=applications.view&id='.$id);
+    }
+
+    // ── Hold Application (1.c) ───────────────────────────────────────────────
+    public static function hold(PDO $pdo, Auth $auth, Logger $logger): void
+    {
+        $auth->requireRole([ROLE_OVERALL_INCHARGE, ROLE_SYSADMIN]);
+        csrf_verify();
+        $id  = (int)($_POST['id'] ?? 0);
+        $app = self::_loadApp($pdo, $id);
+        if (!$app) { flash('error','Not found.'); redirect('index.php?page=applications'); }
+        
+        // Allowed only if validated or beyond
+        if (!$app['is_valid']) {
+            flash('error', 'Only validated projects can be put on hold.'); redirect('index.php?page=applications.view&id='.$id);
+        }
+
+        $comment = trim($_POST['comment'] ?? '');
+        if (!$comment) { flash('error', 'Comment is required to put on hold.'); redirect('index.php?page=applications.view&id='.$id); }
+
+        $pdo->prepare("UPDATE applications SET previous_status=status, status=?, updated_at=CURRENT_TIMESTAMP WHERE id=?")
+            ->execute([STATUS_ON_HOLD, $id]);
+        
+        $logger->appLog($id, $auth->id(), 'on_hold', $comment);
+        $logger->activity($auth->id(), 'hold_application', 'application', $id);
+        flash('warning', 'Application is now ON HOLD.');
+        redirect('index.php?page=applications.view&id='.$id);
+    }
+
+    // ── Unhold Application (1.c) ─────────────────────────────────────────────
+    public static function unhold(PDO $pdo, Auth $auth, Logger $logger): void
+    {
+        $auth->requireRole([ROLE_OVERALL_INCHARGE, ROLE_SYSADMIN]);
+        csrf_verify();
+        $id  = (int)($_POST['id'] ?? 0);
+        $app = self::_loadApp($pdo, $id);
+        if (!$app || $app['status'] !== STATUS_ON_HOLD) { flash('error','Not on hold.'); redirect('index.php?page=applications'); }
+        
+        $comment = trim($_POST['comment'] ?? '');
+        if (!$comment) { flash('error', 'Comment is required to remove hold.'); redirect('index.php?page=applications.view&id='.$id); }
+
+        $revertStatus = $app['previous_status'] ?: STATUS_SUBMITTED;
+        $pdo->prepare("UPDATE applications SET status=?, previous_status=NULL, updated_at=CURRENT_TIMESTAMP WHERE id=?")
+            ->execute([$revertStatus, $id]);
+        
+        $logger->appLog($id, $auth->id(), 'hold_cancelled', $comment);
+        $logger->activity($auth->id(), 'unhold_application', 'application', $id);
+        flash('success', 'Hold removed. Status restored to '.STATUS_LABELS[$revertStatus]);
+        redirect('index.php?page=applications.view&id='.$id);
+    }
+
     // ── Advisory Comment ──────────────────────────────────────────────────────
     public static function comment(PDO $pdo, Auth $auth, Logger $logger): void
     {
-        $auth->requireRole([ROLE_VERIFICATION]);
+        $auth->requireLogin();
         csrf_verify();
         $bulk     = !empty($_POST['bulk']);
         $comment  = trim($_POST['comment'] ?? '');
         if (!$comment) { flash('error','Comment cannot be empty.'); redirect('index.php?page=applications'); }
 
         if ($bulk) {
+            $auth->requireRole([ROLE_OVERALL_INCHARGE, ROLE_SYSADMIN, ROLE_VERIFICATION]);
             $villageId = (int)($_POST['village_id'] ?? 0);
             if (!$auth->isInVillage($villageId)) { flash('error','Access denied.'); redirect('index.php?page=applications'); }
             $stmt = $pdo->prepare("SELECT a.id FROM applications a JOIN applicants ap ON ap.id=a.applicant_id WHERE ap.village_id=? AND a.status NOT IN ('draft','pending_validation','rejected')");
             $stmt->execute([$villageId]);
             foreach ($stmt->fetchAll(PDO::FETCH_COLUMN) as $appId) {
-                $logger->appLog((int)$appId, $auth->id(), 'advisory_comment', $comment);
+                $logger->appLog((int)$appId, $auth->id(), 'comment', $comment);
             }
             $logger->activity($auth->id(), 'bulk_comment', 'village', $villageId);
-            flash('success', 'Bulk comment added to all village applications.');
+            flash('success', 'Bulk comment added.');
         } else {
             $id  = (int)($_POST['application_id'] ?? 0);
             $app = self::_loadApp($pdo, $id);
             if (!$app || !$auth->canViewApplication($app)) { flash('error','Access denied.'); redirect('index.php?page=applications'); }
-            $logger->appLog($id, $auth->id(), 'advisory_comment', $comment);
+            
+            // Check if user is 1.c, or creator (1.a), or validator (1.b)
+            $isCreator = ($app['created_by'] == $auth->id());
+            $isValidator = ($app['validated_by'] == $auth->id());
+            $isOverall = $auth->hasRole([ROLE_OVERALL_INCHARGE, ROLE_SYSADMIN]);
+
+            if (!$isCreator && !$isValidator && !$isOverall && !$auth->hasRole(ROLE_VERIFICATION)) {
+                flash('error', 'You do not have permission to comment on this application.');
+                redirect('index.php?page=applications.view&id='.$id);
+            }
+
+            $logger->appLog($id, $auth->id(), 'comment', $comment);
             $logger->activity($auth->id(), 'comment_application', 'application', $id);
             flash('success', 'Comment added.');
+            redirect('index.php?page=applications.view&id='.$id);
         }
         redirect('index.php?page=applications');
     }
@@ -464,6 +544,17 @@ class ApplicationController
         $id  = (int)($_POST['application_id'] ?? 0);
         $app = self::_loadApp($pdo, $id);
         if (!$app || !$auth->canViewApplication($app)) { flash('error','Access denied.'); redirect('index.php?page=applications'); }
+        
+        // Check permissions: 1.c, or creator (1.a), or validator (1.b)
+        $isCreator = ($app['created_by'] == $auth->id());
+        $isValidator = ($app['validated_by'] == $auth->id());
+        $isOverall = $auth->hasRole([ROLE_OVERALL_INCHARGE, ROLE_SYSADMIN]);
+
+        if (!$isCreator && !$isValidator && !$isOverall) {
+            flash('error', 'You do not have permission to upload documents to this application.');
+            redirect('index.php?page=applications.view&id='.$id);
+        }
+
         if (empty($_FILES['documents']['name'][0])) { flash('error','No files selected.'); redirect('index.php?page=applications.view&id='.$id); }
         $upload = new Upload($pdo, $auth->id());
         $result = $upload->storeMultiple($_FILES['documents'], $id, $_POST['doc_description'] ?? '');

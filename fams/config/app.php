@@ -27,6 +27,7 @@ define('STATUS_APPROVED',           'approved');
 define('STATUS_REJECTED',           'rejected');
 define('STATUS_DISBURSING',         'disbursing');
 define('STATUS_COMPLETED',          'completed');
+define('STATUS_ON_HOLD',            'on_hold');
 
 define('STATUS_LABELS', [
     STATUS_DRAFT              => 'Draft',
@@ -37,6 +38,7 @@ define('STATUS_LABELS', [
     STATUS_REJECTED           => 'Rejected',
     STATUS_DISBURSING         => 'Disbursing',
     STATUS_COMPLETED          => 'Completed',
+    STATUS_ON_HOLD            => 'On Hold',
 ]);
 
 define('STATUS_BADGE', [
@@ -48,6 +50,7 @@ define('STATUS_BADGE', [
     STATUS_REJECTED           => 'badge-red',
     STATUS_DISBURSING         => 'badge-orange',
     STATUS_COMPLETED          => 'badge-teal',
+    STATUS_ON_HOLD            => 'badge-red',
 ]);
 
 // ── Disbursement Types ────────────────────────────────────────────────────────

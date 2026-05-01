@@ -59,6 +59,9 @@ function _migrate(PDO $pdo): void
     if (!in_array('requested_count', $colsB)) {
         $pdo->exec("ALTER TABLE applications ADD COLUMN requested_count INTEGER");
     }
+    if (!in_array('previous_status', $colsB)) {
+        $pdo->exec("ALTER TABLE applications ADD COLUMN previous_status TEXT");
+    }
 }
 
 function _createSchema(PDO $pdo): void
@@ -154,6 +157,7 @@ function _createSchema(PDO $pdo): void
             requested_type       TEXT,
             requested_installment REAL,
             requested_count      INTEGER,
+            previous_status      TEXT,
             created_at           DATETIME DEFAULT CURRENT_TIMESTAMP,
             updated_at           DATETIME DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (applicant_id)     REFERENCES applicants(id),
