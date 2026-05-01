@@ -95,6 +95,8 @@ match (true) {
     $page === 'admin.villages'   => AdminController::villages($pdo, $auth, $logger),
     $page === 'admin.categories' => AdminController::categories($pdo, $auth, $logger),
     $page === 'admin.audit'      => AdminController::audit($pdo, $auth, $logger),
+    $page === 'admin.allocations' => AdminController::allocations($pdo, $auth, $logger),
+
 
     // Fallback
     default => (function() {
