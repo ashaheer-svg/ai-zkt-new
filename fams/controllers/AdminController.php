@@ -168,16 +168,23 @@ class AdminController
             redirect('index.php?page=admin.allocations');
         }
 
-        // Fetch villages with total used amount
+        // Fetch villages with total used amount (released) and committed amount (approved but pending)
         $sql = "SELECT v.*, 
                 (SELECT SUM(d.amount) 
                  FROM disbursements d 
                  JOIN applications a ON a.id = d.application_id 
                  JOIN applicants ap ON ap.id = a.applicant_id
                  WHERE ap.village_id = v.id 
-                 AND a.status IN ('approved', 'disbursing', 'completed')
                  AND d.status = 'released'
-                ) as used_amount
+                ) as released_amount,
+                (SELECT SUM(d.amount) 
+                 FROM disbursements d 
+                 JOIN applications a ON a.id = d.application_id 
+                 JOIN applicants ap ON ap.id = a.applicant_id
+                 WHERE ap.village_id = v.id 
+                 AND d.status IN ('pending', 'authorized')
+                 AND a.status IN ('approved', 'disbursing')
+                ) as committed_amount
                 FROM villages v
                 WHERE v.is_active = 1
                 ORDER BY v.name ASC";

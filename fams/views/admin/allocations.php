@@ -15,20 +15,28 @@
         <tr>
           <th>Village</th>
           <th>Total Allocation</th>
-          <th>Used Amount</th>
-          <th>Remaining Balance</th>
+          <th>Released</th>
+          <th>Committed</th>
+          <th>Total Utilization</th>
+          <th>Balance</th>
           <th style="width: 250px;">Update Limit</th>
         </tr>
       </thead>
       <tbody>
         <?php 
           $totalAllocated = 0;
-          $totalUsed = 0;
+          $totalReleased = 0;
+          $totalCommitted = 0;
           foreach ($villages as $v): 
             $allocated = (float)$v['allocation_amount'];
-            $used = (float)$v['used_amount'];
+            $released  = (float)$v['released_amount'];
+            $committed = (float)$v['committed_amount'];
+            $used      = $released + $committed;
+            
             $totalAllocated += $allocated;
-            $totalUsed += $used;
+            $totalReleased  += $released;
+            $totalCommitted += $committed;
+            
             $remaining = $allocated - $used;
             $percent = $allocated > 0 ? ($used / $allocated) * 100 : 0;
             $color = 'green';
@@ -43,13 +51,19 @@
           <td data-label="Total Allocation">
             <span class="text-large"><?= money($allocated) ?></span>
           </td>
-          <td data-label="Used Amount">
-            <span class="text-<?= $color ?>"><?= money($used) ?></span>
+          <td data-label="Released">
+            <span class="text-green"><?= money($released) ?></span>
+          </td>
+          <td data-label="Committed">
+            <span class="text-orange"><?= money($committed) ?></span>
+          </td>
+          <td data-label="Total Utilization">
+            <span class="text-<?= $color ?>"><strong><?= money($used) ?></strong></span>
             <div style="width: 100px; height: 4px; background: #eee; border-radius: 2px; margin-top: 4px;">
               <div style="width: <?= min(100, $percent) ?>%; height: 100%; background: var(--<?= $color ?>); border-radius: 2px;"></div>
             </div>
           </td>
-          <td data-label="Remaining Balance">
+          <td data-label="Balance">
             <strong class="<?= $remaining < 0 ? 'text-red' : '' ?>"><?= money($remaining) ?></strong>
           </td>
           <td data-label="Update Limit">
@@ -69,8 +83,10 @@
         <tr style="background: rgba(0,0,0,0.02); font-weight: bold;">
           <td>TOTAL</td>
           <td><?= money($totalAllocated) ?></td>
-          <td><?= money($totalUsed) ?></td>
-          <td><?= money($totalAllocated - $totalUsed) ?></td>
+          <td><?= money($totalReleased) ?></td>
+          <td><?= money($totalCommitted) ?></td>
+          <td><?= money($totalReleased + $totalCommitted) ?></td>
+          <td><?= money($totalAllocated - ($totalReleased + $totalCommitted)) ?></td>
           <td></td>
         </tr>
       </tfoot>
