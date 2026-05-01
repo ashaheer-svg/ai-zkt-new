@@ -54,12 +54,16 @@ define('STATUS_BADGE', [
 define('DISB_ONE_TIME', 'one_time');
 define('DISB_WEEKLY',   'weekly');
 define('DISB_MONTHLY',  'monthly');
+define('DISB_QUARTERLY', 'quarterly');
+define('DISB_HALF_YEARLY', 'half_yearly');
 define('DISB_YEARLY',   'yearly');
 
 define('DISB_LABELS', [
     DISB_ONE_TIME => 'One Time',
     DISB_WEEKLY   => 'Weekly',
     DISB_MONTHLY  => 'Monthly',
+    DISB_QUARTERLY => 'Quarterly',
+    DISB_HALF_YEARLY => 'Half-Yearly',
     DISB_YEARLY   => 'Yearly',
 ]);
 

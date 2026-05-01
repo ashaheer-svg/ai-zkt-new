@@ -23,7 +23,7 @@ class DisbursementController
             $count  = (int)($d['disbursement_count'] ?? 1);
             $start  = $d['disbursement_start_date'] ?? '';
 
-            if (!in_array($type, [DISB_ONE_TIME,DISB_WEEKLY,DISB_MONTHLY,DISB_YEARLY])) $errors[] = 'Select a disbursement type.';
+            if (!in_array($type, [DISB_ONE_TIME,DISB_WEEKLY,DISB_MONTHLY,DISB_QUARTERLY,DISB_HALF_YEARLY,DISB_YEARLY])) $errors[] = 'Select a disbursement type.';
             if ($amount <= 0)   $errors[] = 'Amount must be greater than zero.';
             if ($count < 1)     $errors[] = 'Count must be at least 1.';
             if (!$start)        $errors[] = 'Start date is required.';
@@ -39,9 +39,11 @@ class DisbursementController
                     $stmt->execute([$appId, $i, $dt->format('Y-m-d'), $amount]);
                     if ($type === DISB_ONE_TIME) break;
                     match ($type) {
-                        DISB_WEEKLY  => $dt->modify('+1 week'),
-                        DISB_MONTHLY => $dt->modify('+1 month'),
-                        DISB_YEARLY  => $dt->modify('+1 year'),
+                        DISB_WEEKLY       => $dt->modify('+1 week'),
+                        DISB_MONTHLY      => $dt->modify('+1 month'),
+                        DISB_QUARTERLY    => $dt->modify('+3 months'),
+                        DISB_HALF_YEARLY  => $dt->modify('+6 months'),
+                        DISB_YEARLY       => $dt->modify('+1 year'),
                     };
                 }
 
