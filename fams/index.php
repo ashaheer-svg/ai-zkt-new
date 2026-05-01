@@ -1,7 +1,10 @@
 <?php
 declare(strict_types=1);
-
+$sessPath = __DIR__ . '/sessions';
+if (!is_dir($sessPath)) mkdir($sessPath, 0755, true);
+session_save_path($sessPath);
 session_start();
+
 if (empty($_SESSION['session_test'])) {
     $_SESSION['session_test'] = time();
 }

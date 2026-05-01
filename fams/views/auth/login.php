@@ -41,6 +41,11 @@
       <p class="text-small text-muted mt-2" style="text-align:center">
         Default admin: <code>admin</code> / <code>admin123</code>
       </p>
+      <?php if (isset($_SESSION['session_test'])): ?>
+        <p class="text-small text-green" style="text-align:center; font-size: 10px;">Session Active (<?= $_SESSION['session_test'] ?>)</p>
+      <?php else: ?>
+        <p class="text-small text-red" style="text-align:center; font-size: 10px;">Session Inactive (Check Server)</p>
+      <?php endif; ?>
     </div>
   </div>
 </div>
