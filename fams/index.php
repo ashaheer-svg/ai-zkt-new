@@ -20,8 +20,14 @@ $pdo    = getDB();
 $auth   = new Auth($pdo);
 $logger = new Logger($pdo);
 
-$page   = $_GET['page']   ?? 'dashboard';
-$action = $_GET['action'] ?? '';
+$page   = $_GET['page']   ?? '';
+if ($page === '') {
+    if (!$auth->isLoggedIn()) {
+        $page = 'login';
+    } else {
+        $page = $auth->hasRole([ROLE_SYSADMIN, ROLE_OVERALL_INCHARGE]) ? 'dashboard' : 'applications';
+    }
+}
 
 // ── File download — no layout needed ─────────────────────────────────────────
 if ($page === 'doc.download') {

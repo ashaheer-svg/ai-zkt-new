@@ -123,13 +123,13 @@ class Auth
         $this->requireLogin();
         if (!$this->hasRole($roles)) {
             http_response_code(403);
-            if ($this->hasRole(ROLE_SYSADMIN) || $this->hasRole(ROLE_OVERALL_INCHARGE)) {
-                // If they are a high-level user but somehow failed a specific check
-                redirect('index.php?page=dashboard', 'error', 'Access denied.');
-            } else {
-                // For lower-level users, send them to the applications list
-                redirect('index.php?page=applications', 'error', 'You do not have permission to access that page.');
-            }
+            die("
+                <div style='font-family:sans-serif; text-align:center; padding: 50px;'>
+                    <h2>403 — Access Denied</h2>
+                    <p>You do not have permission to access this page.</p>
+                    <a href='index.php'>Back to Home</a>
+                </div>
+            ");
         }
     }
 }

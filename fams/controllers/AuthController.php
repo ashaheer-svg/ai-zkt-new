@@ -3,7 +3,13 @@ class AuthController
 {
     public static function login(PDO $pdo, Auth $auth, Logger $logger): void
     {
-        if ($auth->isLoggedIn()) redirect('index.php?page=dashboard');
+        if ($auth->isLoggedIn()) {
+            if ($auth->hasRole([ROLE_SYSADMIN, ROLE_OVERALL_INCHARGE])) {
+                redirect('index.php?page=dashboard');
+            } else {
+                redirect('index.php?page=applications');
+            }
+        }
 
         $error = '';
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
