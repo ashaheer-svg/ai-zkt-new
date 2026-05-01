@@ -187,6 +187,8 @@ class AdminController
         $pageTitle = 'Project Allocations'; 
         $activePage = 'admin.allocations';
         require __DIR__ . '/../views/admin/allocations.php';
+    }
+
     public static function settings(PDO $pdo, Auth $auth, Logger $logger): void
     {
         $auth->requireRole(ROLE_SYSADMIN);
