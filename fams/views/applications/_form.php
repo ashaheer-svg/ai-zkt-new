@@ -127,9 +127,27 @@ $isEdit = $isEdit ?? false;
         </select>
       </div>
       <div class="form-group">
-        <label>Amount Requested *</label>
-        <input type="number" name="amount_requested" step="0.01" min="0"
-               value="<?= e($d['amount_requested'] ?? $app['amount_requested'] ?? '') ?>" required placeholder="0.00">
+        <label>Payment Schedule Requested *</label>
+        <select name="requested_type" id="req_type" required>
+          <?php foreach (DISB_LABELS as $val => $lbl): ?>
+          <option value="<?= $val ?>" <?= (($d['requested_type']??$app['requested_type']??'')==$val)?'selected':'' ?>><?= $lbl ?></option>
+          <?php endforeach; ?>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Installment Amount *</label>
+        <input type="number" name="requested_installment" id="req_inst" step="0.01" min="0"
+               value="<?= e($d['requested_installment'] ?? $app['requested_installment'] ?? '') ?>" required placeholder="0.00">
+      </div>
+      <div class="form-group">
+        <label>Quantity (No. of Payouts) *</label>
+        <input type="number" name="requested_count" id="req_count" min="1"
+               value="<?= e($d['requested_count'] ?? $app['requested_count'] ?? '1') ?>" required>
+      </div>
+      <div class="form-group">
+        <label>Total Amount Requested</label>
+        <input type="number" name="amount_requested" id="total_req" step="0.01" readonly 
+               value="<?= e($d['amount_requested'] ?? $app['amount_requested'] ?? '') ?>" style="background:var(--bg-dim); font-weight:bold">
       </div>
       <div class="form-group full">
         <label>Notes</label>

@@ -43,9 +43,21 @@ function _migrate(PDO $pdo): void
     }
 
     // Add marital_status to applicants
-    $cols = $pdo->query("PRAGMA table_info(applicants)")->fetchAll(PDO::FETCH_COLUMN, 1);
-    if (!in_array('marital_status', $cols)) {
+    $colsA = $pdo->query("PRAGMA table_info(applicants)")->fetchAll(PDO::FETCH_COLUMN, 1);
+    if (!in_array('marital_status', $colsA)) {
         $pdo->exec("ALTER TABLE applicants ADD COLUMN marital_status TEXT");
+    }
+
+    // Add requested schedule fields to applications
+    $colsB = $pdo->query("PRAGMA table_info(applications)")->fetchAll(PDO::FETCH_COLUMN, 1);
+    if (!in_array('requested_type', $colsB)) {
+        $pdo->exec("ALTER TABLE applications ADD COLUMN requested_type TEXT");
+    }
+    if (!in_array('requested_installment', $colsB)) {
+        $pdo->exec("ALTER TABLE applications ADD COLUMN requested_installment REAL");
+    }
+    if (!in_array('requested_count', $colsB)) {
+        $pdo->exec("ALTER TABLE applications ADD COLUMN requested_count INTEGER");
     }
 }
 
@@ -139,6 +151,9 @@ function _createSchema(PDO $pdo): void
             disbursement_amount  REAL,
             disbursement_count   INTEGER,
             disbursement_start_date DATE,
+            requested_type       TEXT,
+            requested_installment REAL,
+            requested_count      INTEGER,
             created_at           DATETIME DEFAULT CURRENT_TIMESTAMP,
             updated_at           DATETIME DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (applicant_id)     REFERENCES applicants(id),

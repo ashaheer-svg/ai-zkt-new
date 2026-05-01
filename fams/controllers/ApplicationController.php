@@ -114,9 +114,13 @@ class ApplicationController
                 $isValid = $isHigherRole ? 1 : 0;
 
                 $stmt = $pdo->prepare("INSERT INTO applications
-                    (applicant_id,fund_category_id,amount_requested,status,is_valid,created_by)
-                    VALUES (?,?,?,?,?,?)");
-                $stmt->execute([$applicantId, $d['fund_category_id'], $d['amount_requested'], $status, $isValid, $auth->id()]);
+                    (applicant_id,fund_category_id,amount_requested,status,is_valid,created_by,
+                     requested_type,requested_installment,requested_count)
+                    VALUES (?,?,?,?,?,?,?,?,?)");
+                $stmt->execute([
+                    $applicantId, $d['fund_category_id'], $d['amount_requested'], $status, $isValid, $auth->id(),
+                    $d['requested_type'] ?? null, $d['requested_installment'] ?? null, $d['requested_count'] ?? null
+                ]);
                 $appId = (int)$pdo->lastInsertId();
 
                 // Documents
@@ -177,8 +181,9 @@ class ApplicationController
                 }
                 $pdo->prepare("UPDATE applicants SET full_name=?,address=?,gender=?,age=?,id_number=?,telephone=?,marital_status=?,notes=? WHERE id=?")
                     ->execute([$d['full_name'],$d['address']??'',$d['gender'],$d['age']?:null,$d['id_number']??'',$d['telephone']??'',$d['marital_status']??null,$d['notes']??'',$app['applicant_id']]);
-                $pdo->prepare("UPDATE applications SET fund_category_id=?,amount_requested=?,updated_at=CURRENT_TIMESTAMP WHERE id=?")
-                    ->execute([$d['fund_category_id'],$d['amount_requested'],$id]);
+                
+                $pdo->prepare("UPDATE applications SET fund_category_id=?,amount_requested=?,requested_type=?,requested_installment=?,requested_count=?,updated_at=CURRENT_TIMESTAMP WHERE id=?")
+                    ->execute([$d['fund_category_id'],$d['amount_requested'],$d['requested_type']??null,$d['requested_installment']??null,$d['requested_count']??null,$id]);
 
                 // Dependants
                 $pdo->prepare("DELETE FROM applicant_dependants WHERE applicant_id=?")->execute([$app['applicant_id']]);

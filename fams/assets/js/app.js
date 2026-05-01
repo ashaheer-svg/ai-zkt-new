@@ -205,7 +205,46 @@
     }
   }
 
+  function initCalculations() {
+    const inst = document.getElementById('req_inst');
+    const count = document.getElementById('req_count');
+    const total = document.getElementById('total_req');
+    const type = document.getElementById('req_type');
+
+    if (!inst || !count || !total) return;
+
+    function calc() {
+      const i = parseFloat(inst.value) || 0;
+      const c = parseInt(count.value) || 0;
+      total.value = (i * c).toFixed(2);
+    }
+
+    inst.addEventListener('input', calc);
+    count.addEventListener('input', calc);
+    if (type) {
+        type.addEventListener('change', function() {
+            if (this.value === 'one_time') {
+                count.value = 1;
+                count.readOnly = true;
+                count.style.background = 'var(--bg-dim)';
+            } else {
+                count.readOnly = false;
+                count.style.background = '';
+            }
+            calc();
+        });
+        // trigger initial state
+        if (type.value === 'one_time') {
+            count.value = 1;
+            count.readOnly = true;
+            count.style.background = 'var(--bg-dim)';
+        }
+    }
+    calc();
+  }
+
   // Init
   initDependants();
   initTabs();
+  initCalculations();
 })();

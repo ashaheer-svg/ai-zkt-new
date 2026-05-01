@@ -121,7 +121,10 @@
     <div class="card-title">💰 Assistance</div>
     <div class="detail-grid">
       <div class="detail-item"><div class="detail-label">Category</div><div class="detail-value"><?= e($app['category_name'] ?? '—') ?></div></div>
-      <div class="detail-item"><div class="detail-label">Amount Requested</div><div class="detail-value"><strong><?= money($app['amount_requested']) ?></strong></div></div>
+      <div class="detail-item"><div class="detail-label">Requested Schedule</div><div class="detail-value"><?= DISB_LABELS[$app['requested_type']??''] ?? 'One Time' ?></div></div>
+      <div class="detail-item"><div class="detail-label">Installment Amount</div><div class="detail-value"><?= money($app['requested_installment'] ?? $app['amount_requested']) ?></div></div>
+      <div class="detail-item"><div class="detail-label">Quantity</div><div class="detail-value"><?= $app['requested_count'] ?? 1 ?></div></div>
+      <div class="detail-item"><div class="detail-label">Total Amount Requested</div><div class="detail-value"><strong><?= money($app['amount_requested']) ?></strong></div></div>
       <?php if ($app['disbursement_type']): ?>
       <div class="detail-item"><div class="detail-label">Disbursement Type</div><div class="detail-value"><?= DISB_LABELS[$app['disbursement_type']] ?? $app['disbursement_type'] ?></div></div>
       <div class="detail-item"><div class="detail-label">Per Installment</div><div class="detail-value"><?= money($app['disbursement_amount']) ?></div></div>
