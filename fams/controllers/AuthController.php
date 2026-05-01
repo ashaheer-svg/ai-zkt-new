@@ -3,6 +3,8 @@ class AuthController
 {
     public static function login(PDO $pdo, Auth $auth, Logger $logger): void
     {
+        // DISABLED: Automatic redirect from login page can cause loops if session is unstable
+        /*
         if ($auth->isLoggedIn()) {
             if ($auth->hasRole([ROLE_SYSADMIN, ROLE_OVERALL_INCHARGE])) {
                 redirect('index.php?page=dashboard');
@@ -10,6 +12,7 @@ class AuthController
                 redirect('index.php?page=applications');
             }
         }
+        */
 
         $error = '';
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {

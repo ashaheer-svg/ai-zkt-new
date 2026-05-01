@@ -2,6 +2,9 @@
 declare(strict_types=1);
 
 session_start();
+if (empty($_SESSION['session_test'])) {
+    $_SESSION['session_test'] = time();
+}
 
 require_once __DIR__ . '/config/app.php';
 require_once __DIR__ . '/config/database.php';
