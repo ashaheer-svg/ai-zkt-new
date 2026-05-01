@@ -84,12 +84,12 @@ class AdminController
             $d = $_POST;
             if ($action === 'create') {
                 if (empty($d['name'])) { flash('error','Village name required.'); redirect('index.php?page=admin.villages'); }
-                $pdo->prepare("INSERT INTO villages (name,district) VALUES (?,?)")->execute([$d['name'],$d['district']??'']);
+                $pdo->prepare("INSERT INTO villages (name,district,allocation_amount) VALUES (?,?,?)")->execute([$d['name'],$d['district']??'',$d['allocation_amount']?? 0]);
                 $logger->activity($auth->id(),'create_village','village',(int)$pdo->lastInsertId());
                 flash('success','Village added.'); redirect('index.php?page=admin.villages');
             }
             if ($action === 'edit') {
-                $pdo->prepare("UPDATE villages SET name=?,district=? WHERE id=?")->execute([$d['name'],$d['district']??'',(int)$d['id']]);
+                $pdo->prepare("UPDATE villages SET name=?,district=?,allocation_amount=? WHERE id=?")->execute([$d['name'],$d['district']??'',$d['allocation_amount']?? 0,(int)$d['id']]);
                 flash('success','Village updated.'); redirect('index.php?page=admin.villages');
             }
             if ($action === 'toggle') {
@@ -152,5 +152,40 @@ class AdminController
 
         $pageTitle = 'Audit Log'; $activePage = 'admin.audit';
         require __DIR__ . '/../views/admin/audit_log.php';
+    }
+
+    public static function allocations(PDO $pdo, Auth $auth, Logger $logger): void
+    {
+        $auth->requireRole([ROLE_OVERALL_INCHARGE, ROLE_SYSADMIN]);
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            csrf_verify();
+            $id = (int)$_POST['village_id'];
+            $amount = (float)$_POST['allocation_amount'];
+            $pdo->prepare("UPDATE villages SET allocation_amount = ? WHERE id = ?")->execute([$amount, $id]);
+            $logger->activity($auth->id(), 'update_allocation', 'village', $id);
+            flash('success', 'Allocation updated.');
+            redirect('index.php?page=admin.allocations');
+        }
+
+        // Fetch villages with total used amount
+        $sql = "SELECT v.*, 
+                (SELECT SUM(d.amount) 
+                 FROM disbursements d 
+                 JOIN applications a ON a.id = d.application_id 
+                 JOIN applicants ap ON ap.id = a.applicant_id
+                 WHERE ap.village_id = v.id 
+                 AND a.status IN ('approved', 'disbursing', 'completed')
+                 AND d.status = 'released'
+                ) as used_amount
+                FROM villages v
+                WHERE v.is_active = 1
+                ORDER BY v.name ASC";
+        
+        $villages = $pdo->query($sql)->fetchAll();
+
+        $pageTitle = 'NCT Allocations'; 
+        $activePage = 'admin.allocations';
+        require __DIR__ . '/../views/admin/allocations.php';
     }
 }

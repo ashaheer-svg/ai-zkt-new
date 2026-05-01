@@ -11,16 +11,17 @@ if (in_array($role,[ROLE_OVERALL_INCHARGE,ROLE_SYSADMIN])) {
 }
 
 // Applications
-$nav[] = ['page'=>'applications','icon'=>'📋','label'=>'Applications'];
+$nav[] = ['page'=>'applications','icon'=>'📋','label'=>'NCTs'];
 
 // Pending Validation
 if (in_array($role,[ROLE_DATA_ENTRY,ROLE_VILLAGE_INCHARGE,ROLE_OVERALL_INCHARGE,ROLE_SYSADMIN])) {
     $nav[] = ['page'=>'applications.pending','icon'=>'🔍','label'=>'Pending Validation'];
 }
 
-// Disbursements
+// Disbursements & Allocations
 if (in_array($role,[ROLE_OVERALL_INCHARGE,ROLE_SYSADMIN])) {
-    $nav[] = ['page'=>'disbursements','icon'=>'💰','label'=>'Disbursements'];
+    $nav[] = ['page'=>'disbursements',     'icon'=>'🏦','label'=>'Disbursements'];
+    $nav[] = ['page'=>'admin.allocations', 'icon'=>'💰','label'=>'Allocations'];
 }
 
 // Admin

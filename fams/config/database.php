@@ -15,8 +15,18 @@ function getDB(): PDO
     $pdo->exec('PRAGMA foreign_keys=ON');
 
     _createSchema($pdo);
+    _migrate($pdo);
     _seedAdmin($pdo);
     return $pdo;
+}
+
+function _migrate(PDO $pdo): void
+{
+    // Add allocation_amount to villages if missing
+    $cols = $pdo->query("PRAGMA table_info(villages)")->fetchAll(PDO::FETCH_COLUMN, 1);
+    if (!in_array('allocation_amount', $cols)) {
+        $pdo->exec("ALTER TABLE villages ADD COLUMN allocation_amount REAL DEFAULT 0");
+    }
 }
 
 function _createSchema(PDO $pdo): void
@@ -36,6 +46,7 @@ function _createSchema(PDO $pdo): void
             id         INTEGER PRIMARY KEY AUTOINCREMENT,
             name       TEXT    NOT NULL,
             district   TEXT,
+            allocation_amount REAL DEFAULT 0,
             is_active  INTEGER NOT NULL DEFAULT 1,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         );

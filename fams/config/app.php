@@ -1,6 +1,6 @@
 <?php
-define('APP_NAME',    'Financial Assistance Management System');
-define('APP_SHORT',   'FAMS');
+define('APP_NAME',    'Nabaviyyah Charitable Trust');
+define('APP_SHORT',   'NCT');
 define('APP_VERSION', '1.0.0');
 
 // ── Roles ────────────────────────────────────────────────────────────────────
