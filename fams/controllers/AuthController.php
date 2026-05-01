@@ -13,7 +13,13 @@ class AuthController
 
             if ($auth->login($username, $password)) {
                 $logger->activity($auth->id(), 'login', 'user', $auth->id());
-                redirect('index.php?page=dashboard');
+                
+                // Redirect based on role
+                if ($auth->hasRole([ROLE_SYSADMIN, ROLE_OVERALL_INCHARGE])) {
+                    redirect('index.php?page=dashboard');
+                } else {
+                    redirect('index.php?page=applications');
+                }
             }
             $error = 'Invalid username or password.';
         }

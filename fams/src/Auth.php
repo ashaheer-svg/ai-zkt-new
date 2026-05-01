@@ -123,8 +123,13 @@ class Auth
         $this->requireLogin();
         if (!$this->hasRole($roles)) {
             http_response_code(403);
-            flash('error', 'You do not have permission to perform that action.');
-            redirect('index.php?page=dashboard');
+            if ($this->hasRole(ROLE_SYSADMIN) || $this->hasRole(ROLE_OVERALL_INCHARGE)) {
+                // If they are a high-level user but somehow failed a specific check
+                redirect('index.php?page=dashboard', 'error', 'Access denied.');
+            } else {
+                // For lower-level users, send them to the applications list
+                redirect('index.php?page=applications', 'error', 'You do not have permission to access that page.');
+            }
         }
     }
 }
