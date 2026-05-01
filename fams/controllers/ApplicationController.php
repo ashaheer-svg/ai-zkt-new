@@ -375,15 +375,50 @@ class ApplicationController
         csrf_verify();
         $id  = (int)($_POST['id'] ?? 0);
         $app = self::_loadApp($pdo, $id);
-        if (!$app || $app['status'] !== STATUS_UNDER_REVIEW) {
+        if (!$app || !in_array($app['status'], [STATUS_SUBMITTED, STATUS_UNDER_REVIEW])) {
             flash('error','Not available for approval.'); redirect('index.php?page=applications.view&id='.$id);
         }
+        
         $comment = trim($_POST['comment'] ?? '');
-        $pdo->prepare("UPDATE applications SET status='approved',approved_by=?,updated_at=CURRENT_TIMESTAMP WHERE id=?")->execute([$auth->id(),$id]);
-        $logger->appLog($id,$auth->id(),'approved',$comment);
+        $type    = $_POST['disbursement_type'] ?? DISB_ONE_TIME;
+        $amount  = (float)($_POST['disbursement_amount'] ?? 0);
+        $count   = (int)($_POST['disbursement_count'] ?? 1);
+        $start   = $_POST['disbursement_start_date'] ?? date('Y-m-d');
+
+        if ($amount <= 0 || $count <= 0) {
+            flash('error', 'Invalid disbursement guidelines.'); redirect('index.php?page=applications.view&id='.$id);
+        }
+
+        $pdo->beginTransaction();
+        
+        // Update application
+        $pdo->prepare("UPDATE applications SET status='disbursing', approved_by=?, updated_at=CURRENT_TIMESTAMP, 
+                        disbursement_type=?, disbursement_amount=?, disbursement_count=?, disbursement_start_date=? 
+                        WHERE id=?")
+            ->execute([$auth->id(), $type, $amount, $count, $start, $id]);
+
+        // Generate schedule (clear any existing)
+        $pdo->prepare("DELETE FROM disbursements WHERE application_id=?")->execute([$id]);
+        $stmt = $pdo->prepare("INSERT INTO disbursements (application_id,installment_no,due_date,amount) VALUES (?,?,?,?)");
+        $dt   = new DateTime($start);
+        for ($i = 1; $i <= $count; $i++) {
+            $stmt->execute([$id, $i, $dt->format('Y-m-d'), $amount]);
+            if ($type === DISB_ONE_TIME) break;
+            match ($type) {
+                DISB_WEEKLY       => $dt->modify('+1 week'),
+                DISB_MONTHLY      => $dt->modify('+1 month'),
+                DISB_QUARTERLY    => $dt->modify('+3 months'),
+                DISB_HALF_YEARLY  => $dt->modify('+6 months'),
+                DISB_YEARLY       => $dt->modify('+1 year'),
+            };
+        }
+
+        $logger->appLog($id,$auth->id(),'approved',$comment . " | Guidelines: $type, $amount x $count starting $start");
         $logger->activity($auth->id(),'approve_application','application',$id);
-        flash('success','Application approved. Set up disbursement schedule.');
-        redirect('index.php?page=disbursements.schedule&app_id='.$id);
+        $pdo->commit();
+        
+        flash('success','Application approved and disbursement schedule generated.');
+        redirect('index.php?page=applications.view&id='.$id);
     }
 
     // ── Reject (1.b or 1.c) ───────────────────────────────────────────────────

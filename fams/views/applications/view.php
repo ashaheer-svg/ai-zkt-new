@@ -52,7 +52,6 @@
 <!-- Inline action panels -->
 <?php foreach ([
     'reviewPanel'=>['Review Application','decision','review'],
-    'approvePanel'=>['Approve Application','decision','approve'],
     'rejectPanel'=>['Reject Application','reject','reject'],
     'revertPanel'=>['Push Back to Unvalidated','comment','revert'],
     'commentPanel'=>['Advisory Comment','comment','comment']
@@ -62,11 +61,11 @@
   <form method="POST" action="index.php?page=applications.<?= $actionPage ?>">
     <?= csrf_field() ?>
     <input type="hidden" name="id" value="<?= $app['id'] ?>">
-    <?php if (in_array($panelId,['reviewPanel','approvePanel'])): ?>
+    <?php if ($panelId === 'reviewPanel'): ?>
     <div class="form-group mb-1">
       <label>Decision</label>
       <select name="decision" required>
-        <option value="approve">Approve / Forward</option>
+        <option value="approve">Forward for Final Approval</option>
         <option value="reject">Reject</option>
       </select>
     </div>
@@ -85,6 +84,45 @@
   </form>
 </div>
 <?php endforeach; ?>
+
+<!-- Special Approval Panel for 1.c -->
+<div id="approvePanel" style="display:none" class="panel mb-2">
+  <div class="panel-title">✅ Approve Application & Set Disbursement Guidelines</div>
+  <form method="POST" action="index.php?page=applications.approve">
+    <?= csrf_field() ?>
+    <input type="hidden" name="id" value="<?= $app['id'] ?>">
+    <div class="form-grid mb-1">
+      <div class="form-group">
+        <label>Disbursement Type</label>
+        <select name="disbursement_type" required>
+          <?php foreach (DISB_LABELS as $v => $l): ?>
+          <option value="<?= $v ?>" <?= ($app['requested_type']??'')==$v ? 'selected' : '' ?>><?= $l ?></option>
+          <?php endforeach; ?>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Amount Per Installment</label>
+        <input type="number" step="0.01" name="disbursement_amount" value="<?= e($app['requested_installment'] ?? $app['amount_requested']) ?>" required>
+      </div>
+      <div class="form-group">
+        <label>No. of Installments (Qty)</label>
+        <input type="number" name="disbursement_count" value="<?= e($app['requested_count'] ?? 1) ?>" required min="1">
+      </div>
+      <div class="form-group">
+        <label>Start Date</label>
+        <input type="date" name="disbursement_start_date" value="<?= date('Y-m-d') ?>" required>
+      </div>
+    </div>
+    <div class="form-group mb-1">
+      <label>Approval Notes / Additional Context</label>
+      <textarea name="comment" placeholder="Add additional notes…"></textarea>
+    </div>
+    <div class="btn-group">
+      <button type="submit" class="btn btn-success">✅ Approve & Schedule</button>
+      <button type="button" onclick="document.getElementById('approvePanel').style.display='none'" class="btn btn-outline">Cancel</button>
+    </div>
+  </form>
+</div>
 
 <!-- Tabs -->
 <div class="tabs">
