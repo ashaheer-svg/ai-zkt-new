@@ -103,12 +103,12 @@ class ApplicationController
                         ->execute([$applicantId, $d['spouse_name'], $d['spouse_age'] ?: null, $d['spouse_id'] ?? '', $d['spouse_tel'] ?? '']);
                 }
 
-                // Children
-                if (!empty($d['child_name'])) {
-                    $stmt = $pdo->prepare("INSERT INTO applicant_children (applicant_id,full_name,age,gender) VALUES (?,?,?,?)");
-                    foreach ($d['child_name'] as $i => $cn) {
-                        if (trim($cn) === '') continue;
-                        $stmt->execute([$applicantId, $cn, $d['child_age'][$i] ?: null, $d['child_gender'][$i] ?? '']);
+                // Dependants
+                if (!empty($d['dep_name'])) {
+                    $stmt = $pdo->prepare("INSERT INTO applicant_dependants (applicant_id,full_name,age,gender,relationship) VALUES (?,?,?,?,?)");
+                    foreach ($d['dep_name'] as $i => $dn) {
+                        if (trim($dn) === '') continue;
+                        $stmt->execute([$applicantId, $dn, $d['dep_age'][$i] ?: null, $d['dep_gender'][$i] ?? '', $d['dep_rel'][$i] ?? '']);
                     }
                 }
 
@@ -157,7 +157,7 @@ class ApplicationController
         $applicant  = $pdo->prepare("SELECT * FROM applicants WHERE id=?")->execute([$app['applicant_id']]) ? null : null;
         $stmt       = $pdo->prepare("SELECT * FROM applicants WHERE id=?"); $stmt->execute([$app['applicant_id']]); $applicant = $stmt->fetch();
         $stmtS      = $pdo->prepare("SELECT * FROM applicant_spouse WHERE applicant_id=?"); $stmtS->execute([$app['applicant_id']]); $spouse = $stmtS->fetch();
-        $stmtC      = $pdo->prepare("SELECT * FROM applicant_children WHERE applicant_id=? ORDER BY id"); $stmtC->execute([$app['applicant_id']]); $children = $stmtC->fetchAll();
+        $stmtC      = $pdo->prepare("SELECT * FROM applicant_dependants WHERE applicant_id=? ORDER BY id"); $stmtC->execute([$app['applicant_id']]); $dependants = $stmtC->fetchAll();
         $villages   = self::_allowedVillages($pdo, $auth);
         $categories = $pdo->query("SELECT * FROM fund_categories WHERE is_active=1 ORDER BY name")->fetchAll();
         $errors     = [];
@@ -190,12 +190,12 @@ class ApplicationController
                     $pdo->prepare("INSERT INTO applicant_spouse (applicant_id,full_name,age,id_number,telephone) VALUES (?,?,?,?,?)")
                         ->execute([$app['applicant_id'],$d['spouse_name'],$d['spouse_age']?:null,$d['spouse_id']??'',$d['spouse_tel']??'']);
                 }
-                $pdo->prepare("DELETE FROM applicant_children WHERE applicant_id=?")->execute([$app['applicant_id']]);
-                if (!empty($d['child_name'])) {
-                    $stmt = $pdo->prepare("INSERT INTO applicant_children (applicant_id,full_name,age,gender) VALUES (?,?,?,?)");
-                    foreach ($d['child_name'] as $i => $cn) {
-                        if (trim($cn)==='') continue;
-                        $stmt->execute([$app['applicant_id'],$cn,$d['child_age'][$i]?:null,$d['child_gender'][$i]??'']);
+                $pdo->prepare("DELETE FROM applicant_dependants WHERE applicant_id=?")->execute([$app['applicant_id']]);
+                if (!empty($d['dep_name'])) {
+                    $stmt = $pdo->prepare("INSERT INTO applicant_dependants (applicant_id,full_name,age,gender,relationship) VALUES (?,?,?,?,?)");
+                    foreach ($d['dep_name'] as $i => $dn) {
+                        if (trim($dn)==='') continue;
+                        $stmt->execute([$app['applicant_id'],$dn,$d['dep_age'][$i]?:null,$d['dep_gender'][$i]??'',$d['dep_rel'][$i]??'']);
                     }
                 }
                 if (!empty($_FILES['documents']['name'][0])) {
@@ -224,7 +224,7 @@ class ApplicationController
         }
         $stmt = $pdo->prepare("SELECT * FROM applicants WHERE id=?"); $stmt->execute([$app['applicant_id']]); $applicant = $stmt->fetch();
         $stmtS = $pdo->prepare("SELECT * FROM applicant_spouse WHERE applicant_id=?"); $stmtS->execute([$app['applicant_id']]); $spouse = $stmtS->fetch();
-        $stmtC = $pdo->prepare("SELECT * FROM applicant_children WHERE applicant_id=? ORDER BY id"); $stmtC->execute([$app['applicant_id']]); $children = $stmtC->fetchAll();
+        $stmtC = $pdo->prepare("SELECT * FROM applicant_dependants WHERE applicant_id=? ORDER BY id"); $stmtC->execute([$app['applicant_id']]); $dependants = $stmtC->fetchAll();
         $timeline    = $logger->getTimeline($id);
         $editHistory = $logger->getEditHistory($id);
         $upload      = new Upload($pdo, $auth->id());

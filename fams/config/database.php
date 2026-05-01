@@ -27,6 +27,20 @@ function _migrate(PDO $pdo): void
     if (!in_array('allocation_amount', $cols)) {
         $pdo->exec("ALTER TABLE villages ADD COLUMN allocation_amount REAL DEFAULT 0");
     }
+
+    // Rename applicant_children to applicant_dependants
+    $tables = $pdo->query("SELECT name FROM sqlite_master WHERE type='table'")->fetchAll(PDO::FETCH_COLUMN);
+    if (in_array('applicant_children', $tables) && !in_array('applicant_dependants', $tables)) {
+        $pdo->exec("ALTER TABLE applicant_children RENAME TO applicant_dependants");
+    }
+
+    // Add relationship to applicant_dependants
+    if (in_array('applicant_dependants', $tables)) {
+        $cols = $pdo->query("PRAGMA table_info(applicant_dependants)")->fetchAll(PDO::FETCH_COLUMN, 1);
+        if (!in_array('relationship', $cols)) {
+            $pdo->exec("ALTER TABLE applicant_dependants ADD COLUMN relationship TEXT");
+        }
+    }
 }
 
 function _createSchema(PDO $pdo): void
@@ -91,12 +105,13 @@ function _createSchema(PDO $pdo): void
             FOREIGN KEY (applicant_id) REFERENCES applicants(id) ON DELETE CASCADE
         );
 
-        CREATE TABLE IF NOT EXISTS applicant_children (
+        CREATE TABLE IF NOT EXISTS applicant_dependants (
             id           INTEGER PRIMARY KEY AUTOINCREMENT,
             applicant_id INTEGER NOT NULL,
             full_name    TEXT    NOT NULL,
             age          INTEGER,
             gender       TEXT,
+            relationship TEXT,
             FOREIGN KEY (applicant_id) REFERENCES applicants(id) ON DELETE CASCADE
         );
 

@@ -56,63 +56,75 @@ $isEdit = $isEdit ?? false;
     </div>
   </div>
 
-  <!-- Spouse -->
+  <!-- Spouse & Dependant Details -->
   <div class="form-section">
-    <div class="form-section-title">💍 Spouse Details</div>
-    <label style="display:flex;align-items:center;gap:.5rem;cursor:pointer;font-size:.875rem;font-weight:500;color:var(--text);margin-bottom:.75rem">
-      <input type="checkbox" id="has_spouse" name="has_spouse" value="1"
-             <?= !empty($spouse) || !empty($d['has_spouse']) ? 'checked' : '' ?>>
-      Applicant has a spouse
-    </label>
-    <div id="spouse-section" style="display:none">
-      <div class="form-grid">
-        <div class="form-group">
-          <label>Spouse Full Name</label>
-          <input type="text" name="spouse_name" value="<?= e($spouse['full_name'] ?? $d['spouse_name'] ?? '') ?>" placeholder="Full name">
-        </div>
-        <div class="form-group">
-          <label>Age</label>
-          <input type="number" name="spouse_age" value="<?= e($spouse['age'] ?? $d['spouse_age'] ?? '') ?>" min="0">
-        </div>
-        <div class="form-group">
-          <label>ID / NIC</label>
-          <input type="text" name="spouse_id" value="<?= e($spouse['id_number'] ?? $d['spouse_id'] ?? '') ?>">
-        </div>
-        <div class="form-group">
-          <label>Telephone</label>
-          <input type="tel" name="spouse_tel" value="<?= e($spouse['telephone'] ?? $d['spouse_tel'] ?? '') ?>">
+    <div class="form-section-title">💍 Family & Dependants</div>
+    
+    <div class="mb-2">
+      <label style="display:flex;align-items:center;gap:.5rem;cursor:pointer;font-size:.875rem;font-weight:500;color:var(--text);margin-bottom:.5rem">
+        <input type="checkbox" id="has_spouse" name="has_spouse" value="1"
+               <?= !empty($spouse) || !empty($d['has_spouse']) ? 'checked' : '' ?>>
+        Applicant has a spouse
+      </label>
+      <div id="spouse-section" style="<?= !empty($spouse) || !empty($d['has_spouse']) ? '' : 'display:none' ?>" class="panel-muted p-1">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Spouse Full Name</label>
+            <input type="text" name="spouse_name" value="<?= e($spouse['full_name'] ?? $d['spouse_name'] ?? '') ?>" placeholder="Full name">
+          </div>
+          <div class="form-group">
+            <label>Age</label>
+            <input type="number" name="spouse_age" value="<?= e($spouse['age'] ?? $d['spouse_age'] ?? '') ?>" min="0">
+          </div>
+          <div class="form-group">
+            <label>ID / NIC</label>
+            <input type="text" name="spouse_id" value="<?= e($spouse['id_number'] ?? $d['spouse_id'] ?? '') ?>">
+          </div>
+          <div class="form-group">
+            <label>Telephone</label>
+            <input type="tel" name="spouse_tel" value="<?= e($spouse['telephone'] ?? $d['spouse_tel'] ?? '') ?>">
+          </div>
         </div>
       </div>
     </div>
-  </div>
 
-  <!-- Children -->
-  <div class="form-section">
-    <div class="form-section-title">👶 Children</div>
-    <div id="children-container">
-      <?php foreach (($children ?? []) as $c): ?>
-      <div class="child-row form-grid mb-1">
+    <div id="dependants-container">
+      <?php foreach (($dependants ?? []) as $c): ?>
+      <div class="dep-row form-grid mb-1 panel-muted p-1" style="position:relative">
         <div class="form-group">
-          <label>Child Full Name</label>
-          <input type="text" name="child_name[]" value="<?= e($c['full_name']) ?>" placeholder="Full name">
+          <label>Full Name</label>
+          <input type="text" name="dep_name[]" value="<?= e($c['full_name']) ?>" placeholder="Full name">
         </div>
         <div class="form-group">
           <label>Age</label>
-          <input type="number" name="child_age[]" value="<?= e($c['age']) ?>" min="0" max="25">
+          <input type="number" name="dep_age[]" value="<?= e($c['age']) ?>" min="0" max="120">
+        </div>
+        <div class="form-group">
+          <label>Relationship</label>
+          <select name="dep_rel[]" class="dep-rel-select">
+            <option value="child"       <?= ($c['relationship']??'')==='child'      ?'selected':'' ?>>Child</option>
+            <option value="parent"      <?= ($c['relationship']??'')==='parent'     ?'selected':'' ?>>Parent</option>
+            <option value="grandparent" <?= ($c['relationship']??'')==='grandparent'?'selected':'' ?>>Grand Parent</option>
+            <option value="other"       <?= (!in_array($c['relationship']??'',['child','parent','grandparent']) && !empty($c['relationship'])) ?'selected':'' ?>>Other</option>
+          </select>
+          <input type="text" name="dep_rel_other[]" class="dep-rel-other mt-1" 
+                 value="<?= (!in_array($c['relationship']??'',['child','parent','grandparent'])) ? e($c['relationship']) : '' ?>"
+                 style="<?= (!in_array($c['relationship']??'',['child','parent','grandparent']) && !empty($c['relationship'])) ? '' : 'display:none' ?>"
+                 placeholder="Specify relationship…">
         </div>
         <div class="form-group">
           <label>Gender</label>
-          <select name="child_gender[]">
+          <select name="dep_gender[]">
             <option value="">—</option>
             <option value="male"   <?= ($c['gender']??'')==='male'   ?'selected':'' ?>>Male</option>
             <option value="female" <?= ($c['gender']??'')==='female' ?'selected':'' ?>>Female</option>
           </select>
         </div>
-        <button type="button" class="btn btn-danger btn-sm remove-child" style="align-self:flex-end">Remove</button>
+        <button type="button" class="btn btn-danger btn-sm remove-dep" style="position:absolute;top:0.5rem;right:0.5rem">×</button>
       </div>
       <?php endforeach; ?>
     </div>
-    <button type="button" id="add-child" class="btn btn-outline btn-sm mt-1">+ Add Child</button>
+    <button type="button" id="add-dep" class="btn btn-outline btn-sm mt-1">+ Add Dependant</button>
   </div>
 
   <!-- Assistance Details -->

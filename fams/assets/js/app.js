@@ -25,43 +25,63 @@
     toggle();
   }
 
-  // ── Dynamic children rows ────────────────────────────────────────────────────
-  function initChildren() {
-    const container = document.getElementById('children-container');
-    const addBtn    = document.getElementById('add-child');
+  // ── Dynamic dependants rows ──────────────────────────────────────────────────
+  function initDependants() {
+    const container = document.getElementById('dependants-container');
+    const addBtn    = document.getElementById('add-dep');
     if (!container || !addBtn) return;
 
+    function bindRelOther(row) {
+      const select = row.querySelector('.dep-rel-select');
+      const other  = row.querySelector('.dep-rel-other');
+      if (!select || !other) return;
+      select.addEventListener('change', () => {
+        other.style.display = select.value === 'other' ? 'block' : 'none';
+        if (select.value !== 'other') other.value = '';
+      });
+    }
+
     addBtn.addEventListener('click', () => {
-      const idx  = container.querySelectorAll('.child-row').length;
       const row  = document.createElement('div');
-      row.className = 'child-row form-grid mb-1';
+      row.className = 'dep-row form-grid mb-1 panel-muted p-1';
       row.style.position = 'relative';
       row.innerHTML = `
         <div class="form-group">
-          <label>Child Full Name</label>
-          <input type="text" name="child_name[]" placeholder="Full name">
+          <label>Full Name</label>
+          <input type="text" name="dep_name[]" placeholder="Full name">
         </div>
         <div class="form-group">
           <label>Age</label>
-          <input type="number" name="child_age[]" min="0" max="25" placeholder="Age">
+          <input type="number" name="dep_age[]" min="0" max="120" placeholder="Age">
+        </div>
+        <div class="form-group">
+          <label>Relationship</label>
+          <select name="dep_rel[]" class="dep-rel-select">
+            <option value="child">Child</option>
+            <option value="parent">Parent</option>
+            <option value="grandparent">Grand Parent</option>
+            <option value="other">Other</option>
+          </select>
+          <input type="text" name="dep_rel_other[]" class="dep-rel-other mt-1" style="display:none" placeholder="Specify relationship…">
         </div>
         <div class="form-group">
           <label>Gender</label>
-          <select name="child_gender[]">
+          <select name="dep_gender[]">
             <option value="">—</option>
             <option value="male">Male</option>
             <option value="female">Female</option>
           </select>
         </div>
-        <button type="button" class="btn btn-danger btn-sm remove-child" style="align-self:flex-end;margin-bottom:0">Remove</button>
+        <button type="button" class="btn btn-danger btn-sm remove-dep" style="position:absolute;top:0.5rem;right:0.5rem">×</button>
       `;
       container.appendChild(row);
-      row.querySelector('.remove-child').addEventListener('click', () => row.remove());
+      bindRelOther(row);
+      row.querySelector('.remove-dep').addEventListener('click', () => row.remove());
     });
 
-    // Existing remove buttons
-    container.querySelectorAll('.remove-child').forEach(btn => {
-      btn.addEventListener('click', () => btn.closest('.child-row').remove());
+    container.querySelectorAll('.dep-row').forEach(row => {
+      bindRelOther(row);
+      row.querySelector('.remove-dep').addEventListener('click', () => row.remove());
     });
   }
 
@@ -183,6 +203,6 @@
 
   // Init
   initSpouse();
-  initChildren();
+  initDependants();
   initTabs();
 })();

@@ -112,12 +112,17 @@
   </div>
   <?php endif; ?>
 
-  <?php if ($children): ?>
+  <?php if ($dependants): ?>
   <div class="card mb-2">
-    <div class="card-title">👶 Children (<?= count($children) ?>)</div>
-    <div class="table-wrap"><table><thead><tr><th>Name</th><th>Age</th><th>Gender</th></tr></thead><tbody>
-      <?php foreach ($children as $c): ?>
-      <tr><td><?= e($c['full_name']) ?></td><td><?= $c['age']?:'—' ?></td><td><?= ucfirst($c['gender']?:'—') ?></td></tr>
+    <div class="card-title">👥 Dependants (<?= count($dependants) ?>)</div>
+    <div class="table-wrap"><table><thead><tr><th>Name</th><th>Relationship</th><th>Age</th><th>Gender</th></tr></thead><tbody>
+      <?php foreach ($dependants as $c): ?>
+      <tr>
+        <td><?= e($c['full_name']) ?></td>
+        <td><span class="badge badge-outline"><?= ucfirst(e($c['relationship']?:'—')) ?></span></td>
+        <td><?= $c['age']?:'—' ?></td>
+        <td><?= ucfirst($c['gender']?:'—') ?></td>
+      </tr>
       <?php endforeach; ?>
     </tbody></table></div>
   </div>

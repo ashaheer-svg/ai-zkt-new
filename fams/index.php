@@ -96,6 +96,9 @@ match (true) {
     $page === 'admin.categories' => AdminController::categories($pdo, $auth, $logger),
     $page === 'admin.audit'      => AdminController::audit($pdo, $auth, $logger),
     $page === 'admin.allocations' => AdminController::allocations($pdo, $auth, $logger),
+    $page === 'admin.settings'   => AdminController::settings($pdo, $auth, $logger),
+    $page === 'admin.system'     => AdminController::system($pdo, $auth, $logger),
+    $page === 'admin.db_backup'  => AdminController::db_backup($pdo, $auth, $logger),
 
 
     // Fallback

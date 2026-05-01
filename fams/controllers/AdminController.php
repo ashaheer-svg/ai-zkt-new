@@ -187,5 +187,57 @@ class AdminController
         $pageTitle = 'Project Allocations'; 
         $activePage = 'admin.allocations';
         require __DIR__ . '/../views/admin/allocations.php';
+    public static function settings(PDO $pdo, Auth $auth, Logger $logger): void
+    {
+        $auth->requireRole(ROLE_SYSADMIN);
+        $pageTitle = 'Settings'; $activePage = 'admin.settings';
+        require __DIR__ . '/../views/admin/settings.php';
+    }
+
+    public static function system(PDO $pdo, Auth $auth, Logger $logger): void
+    {
+        $auth->requireRole(ROLE_SYSADMIN);
+        
+        $dbPath = __DIR__ . '/../database/fams.sqlite';
+        $dbSize = file_exists($dbPath) ? filesize($dbPath) : 0;
+        
+        // Disk usage (root)
+        $diskTotal = disk_total_space("/");
+        $diskFree  = disk_free_space("/");
+        $diskUsed  = $diskTotal - $diskFree;
+        $diskPercent = $diskTotal > 0 ? round(($diskUsed / $diskTotal) * 100, 2) : 0;
+
+        $sysInfo = [
+            'db_size' => $dbSize,
+            'disk_total' => $diskTotal,
+            'disk_free' => $diskFree,
+            'disk_used' => $diskUsed,
+            'disk_percent' => $diskPercent,
+            'php_version' => PHP_VERSION,
+            'server_software' => $_SERVER['SERVER_SOFTWARE'] ?? 'Unknown',
+            'os' => PHP_OS,
+        ];
+
+        $pageTitle = 'Administration'; $activePage = 'admin.system';
+        require __DIR__ . '/../views/admin/system.php';
+    }
+
+    public static function db_backup(PDO $pdo, Auth $auth, Logger $logger): void
+    {
+        $auth->requireRole(ROLE_SYSADMIN);
+        $dbPath = __DIR__ . '/../database/fams.sqlite';
+        if (!file_exists($dbPath)) { flash('error', 'DB file not found.'); redirect('index.php?page=admin.system'); }
+
+        $logger->activity($auth->id(), 'db_backup', 'system', 0);
+        
+        header('Content-Description: File Transfer');
+        header('Content-Type: application/octet-stream');
+        header('Content-Disposition: attachment; filename="nct_backup_'.date('Y-m-d_His').'.sqlite"');
+        header('Expires: 0');
+        header('Cache-Control: must-revalidate');
+        header('Pragma: public');
+        header('Content-Length: ' . filesize($dbPath));
+        readfile($dbPath);
+        exit;
     }
 }

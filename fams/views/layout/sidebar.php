@@ -26,10 +26,9 @@ if (in_array($role,[ROLE_OVERALL_INCHARGE,ROLE_SYSADMIN])) {
 
 // Admin
 if ($role === ROLE_SYSADMIN) {
-    $nav[] = ['page'=>'admin.users',     'icon'=>'👥','label'=>'Users'];
-    $nav[] = ['page'=>'admin.villages',  'icon'=>'🏘️','label'=>'Villages'];
-    $nav[] = ['page'=>'admin.categories','icon'=>'🗂️','label'=>'Fund Categories'];
-    $nav[] = ['page'=>'admin.audit',     'icon'=>'📜','label'=>'Audit Log'];
+    $nav[] = ['page'=>'admin.settings', 'icon'=>'⚙️','label'=>'Settings'];
+    $nav[] = ['page'=>'admin.system',   'icon'=>'🛡️','label'=>'Administration'];
+    $nav[] = ['page'=>'admin.audit',    'icon'=>'📜','label'=>'Audit Log'];
 }
 ?>
   <aside class="sidebar" id="sidebar">
