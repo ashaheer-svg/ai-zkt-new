@@ -475,7 +475,6 @@ textarea { resize:vertical; min-height:90px; }
   display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
   gap:.75rem;
 }
-.detail-item {}
 .detail-label { font-size:.72rem; color:var(--text-dim); font-weight:600; text-transform:uppercase; letter-spacing:.05em; }
 .detail-value { font-size:.9rem; color:var(--text); margin-top:.15rem; }
 
