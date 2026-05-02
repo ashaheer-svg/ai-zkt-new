@@ -12,13 +12,13 @@
 </div>
 <?php else: ?>
 <!-- Filters for Global View -->
-<div class="card mb-2">
-  <form method="GET" action="index.php" class="filter-row">
+<div class="card mb-1" style="padding: 0.75rem 1rem;">
+  <form method="GET" action="index.php" class="filter-row-compact">
     <input type="hidden" name="page" value="disbursements">
     
-    <div class="filter-item">
+    <div class="filter-group">
       <label>Village</label>
-      <select name="village_id">
+      <select name="village_id" class="form-control-sm">
         <option value="">All Villages</option>
         <?php foreach ($villages as $v): ?>
         <option value="<?= $v['id'] ?>" <?= (int)($_GET['village_id']??0)==$v['id']?'selected':'' ?>><?= e($v['name']) ?></option>
@@ -26,57 +26,63 @@
       </select>
     </div>
 
-    <div class="filter-item">
+    <div class="filter-group">
       <label>Period</label>
-      <select name="period">
+      <select name="period" class="form-control-sm">
         <option value="">All Time</option>
-        <option value="month" <?= ($_GET['period']??'')=='month'?'selected':'' ?>>Current Month</option>
-        <option value="quarter" <?= ($_GET['period']??'')=='quarter'?'selected':'' ?>>Current Quarter</option>
-        <option value="year" <?= ($_GET['period']??'')=='year'?'selected':'' ?>>Current Year</option>
+        <option value="month" <?= ($_GET['period']??'')=='month'?'selected':'' ?>>Month</option>
+        <option value="quarter" <?= ($_GET['period']??'')=='quarter'?'selected':'' ?>>Quarter</option>
+        <option value="year" <?= ($_GET['period']??'')=='year'?'selected':'' ?>>Year</option>
       </select>
     </div>
 
-    <div class="filter-item d-flex align-end">
-      <button type="submit" class="btn btn-primary">Filter</button>
-      <a href="index.php?page=disbursements" class="btn btn-outline" style="margin-left:5px">Reset</a>
+    <div class="filter-actions">
+      <button type="submit" class="btn btn-primary btn-sm">Filter</button>
+      <a href="index.php?page=disbursements" class="btn btn-outline btn-sm">Reset</a>
     </div>
   </form>
 </div>
 
 <!-- Stats Cards -->
 <?php if (isset($stats)): ?>
-<div class="grid-stats mb-2">
-  <div class="card stat-card">
-    <div class="stat-label">Total Scheduled</div>
-    <div class="stat-value text-large"><?= money($stats['total_scheduled'] ?? 0) ?></div>
-    <div class="stat-hint text-small muted">Based on current filters</div>
+<div class="grid-stats mb-1">
+  <div class="card stat-card-compact">
+    <div class="stat-label-sm">Scheduled</div>
+    <div class="stat-value-sm"><?= money($stats['total_scheduled'] ?? 0) ?></div>
   </div>
-  <div class="card stat-card">
-    <div class="stat-label">Total Released</div>
-    <div class="stat-value text-large text-green"><?= money($stats['total_released'] ?? 0) ?></div>
-    <div class="stat-hint text-small muted">Payments already made</div>
+  <div class="card stat-card-compact border-green">
+    <div class="stat-label-sm">Released</div>
+    <div class="stat-value-sm text-green"><?= money($stats['total_released'] ?? 0) ?></div>
   </div>
-  <div class="card stat-card">
-    <div class="stat-label">Pending / Balance</div>
-    <div class="stat-value text-large text-orange"><?= money(($stats['total_scheduled'] ?? 0) - ($stats['total_released'] ?? 0)) ?></div>
-    <div class="stat-hint text-small muted">Scheduled but not yet paid</div>
+  <div class="card stat-card-compact border-orange">
+    <div class="stat-label-sm">Pending</div>
+    <div class="stat-value-sm text-orange"><?= money(($stats['total_scheduled'] ?? 0) - ($stats['total_released'] ?? 0)) ?></div>
   </div>
 </div>
 
 <style>
-.grid-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; }
-.stat-card { padding: 1.5rem; display: flex; flex-direction: column; align-items: center; text-align: center; border-left: 4px solid var(--primary); }
-.stat-card .text-green { color: var(--green); border-left-color: var(--green); }
-.stat-card .text-orange { color: var(--orange); border-left-color: var(--orange); }
-.stat-label { font-weight: 600; color: var(--text-muted); font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.5rem; }
-.stat-value { font-size: 1.75rem; font-weight: 800; margin-bottom: 0.25rem; }
+.filter-row-compact { display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap; }
+.filter-group { display: flex; align-items: center; gap: 0.5rem; }
+.filter-group label { font-size: 0.85rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0; white-space: nowrap; }
+.form-control-sm { padding: 4px 8px; font-size: 0.85rem; border: 1px solid #ddd; border-radius: 4px; background: #fff; }
+.filter-actions { display: flex; gap: 0.5rem; }
+
+.grid-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.75rem; }
+.stat-card-compact { padding: 0.75rem; display: flex; flex-direction: column; align-items: center; border-left: 3px solid var(--primary); }
+.stat-card-compact.border-green { border-left-color: var(--green); }
+.stat-card-compact.border-orange { border-left-color: var(--orange); }
+.stat-label-sm { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: var(--text-muted); margin-bottom: 2px; }
+.stat-value-sm { font-size: 1.25rem; font-weight: 700; }
+
+.table-compact th, .table-compact td { padding: 6px 10px !important; font-size: 0.85rem !important; }
+.table-compact th { background: #f8f9fa; border-bottom: 2px solid #eee; }
 </style>
 <?php endif; ?>
 <?php endif; ?>
 
 <div class="card" style="padding:0">
   <div class="table-wrap">
-    <table class="table-card">
+    <table class="table-card table-compact">
       <thead><tr>
         <th>#</th>
         <?php if (!$app): ?>
