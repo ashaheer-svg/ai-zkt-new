@@ -123,3 +123,57 @@ function client_ip(): string
         ?? $_SERVER['REMOTE_ADDR']
         ?? '0.0.0.0';
 }
+
+// ── Sorting & UI ──────────────────────────────────────────────────────────────
+function sort_link(string $label, string $field): string
+{
+    $params = $_GET;
+    $currentSort = $params['sort'] ?? '';
+    $currentOrder = strtoupper($params['order'] ?? 'ASC');
+    
+    $newOrder = ($currentSort === $field && $currentOrder === 'ASC') ? 'DESC' : 'ASC';
+    $params['sort'] = $field;
+    $params['order'] = $newOrder;
+    $params['p'] = 1; // Reset to page 1 on sort
+    
+    $url = 'index.php?' . http_build_query($params);
+    $icon = '';
+    if ($currentSort === $field) {
+        $icon = ($currentOrder === 'ASC') ? ' ▴' : ' ▾';
+    }
+    
+    return '<a href="' . e($url) . '" class="sort-link">' . e($label) . $icon . '</a>';
+}
+
+function render_pagination(array $p): string
+{
+    if ($p['pages'] <= 1) return '';
+    
+    $html = '<div class="pagination">';
+    $params = $_GET;
+    
+    // Prev
+    if ($p['page'] > 1) {
+        $params['p'] = $p['page'] - 1;
+        $html .= '<a href="index.php?'.http_build_query($params).'" class="page-link">&laquo;</a>';
+    }
+
+    for ($i = 1; $i <= $p['pages']; $i++) {
+        if ($i > 3 && $i < $p['pages'] - 2 && abs($i - $p['page']) > 2) {
+            if (!str_ends_with($html, '<span class="pager-dots">...</span>')) $html .= '<span class="pager-dots">...</span>';
+            continue;
+        }
+        $params['p'] = $i;
+        $active = ($i === $p['page']) ? 'active' : '';
+        $html .= '<a href="index.php?'.http_build_query($params).'" class="page-link '.$active.'">'.$i.'</a>';
+    }
+
+    // Next
+    if ($p['page'] < $p['pages']) {
+        $params['p'] = $p['page'] + 1;
+        $html .= '<a href="index.php?'.http_build_query($params).'" class="page-link">&raquo;</a>';
+    }
+    
+    $html .= '</div>';
+    return $html;
+}
