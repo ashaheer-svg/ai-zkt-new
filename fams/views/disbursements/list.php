@@ -60,11 +60,47 @@
   </div>
 </div>
 
+<!-- Modal for Comments -->
+<div id="commentModal" class="modal-overlay" style="display:none">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3 id="modalTitle">Disbursement Notes</h3>
+      <button onclick="closeCommentModal()" class="close-btn">&times;</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+    <div class="modal-footer">
+      <button onclick="closeCommentModal()" class="btn btn-outline">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+function showComment(title, text) {
+    document.getElementById('modalTitle').innerText = title;
+    document.getElementById('modalBody').innerText = text;
+    document.getElementById('commentModal').style.display = 'flex';
+}
+function closeCommentModal() {
+    document.getElementById('commentModal').style.display = 'none';
+}
+window.onclick = function(event) {
+    if (event.target == document.getElementById('commentModal')) closeCommentModal();
+}
+</script>
+
 <style>
+.modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: center; justify-content: center; }
+.modal-content { background: #fff; width: 90%; max-width: 500px; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); overflow: hidden; }
+.modal-header { padding: 1rem; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; background: #f8f9fa; }
+.modal-header h3 { margin: 0; font-size: 1.1rem; }
+.close-btn { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #999; }
+.modal-body { padding: 1.5rem; font-size: 1rem; line-height: 1.6; white-space: pre-wrap; color: #444; }
+.modal-footer { padding: 0.75rem 1rem; border-top: 1px solid #eee; text-align: right; }
+
 .filter-row-compact { display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap; }
 .filter-group { display: flex; align-items: center; gap: 0.5rem; }
 .filter-group label { font-size: 0.85rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0; white-space: nowrap; }
-.form-control-sm { padding: 4px 8px; font-size: 0.85rem; border: 1px solid #ddd; border-radius: 4px; background: #fff; }
+.form-control-sm { padding: 4px 8px; font-size: 0.85rem; border: 1px solid #ddd; border-radius: 4px; background: #fff; color: #333 !important; }
 .filter-actions { display: flex; gap: 0.5rem; }
 
 .grid-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.75rem; }
@@ -76,6 +112,9 @@
 
 .table-compact th, .table-compact td { padding: 6px 10px !important; font-size: 0.85rem !important; }
 .table-compact th { background: #f8f9fa; border-bottom: 2px solid #eee; }
+
+.note-link { color: var(--primary); cursor: pointer; text-decoration: underline; font-size: 0.8rem; }
+.note-link:hover { color: var(--primary-dark); }
 </style>
 <?php endif; ?>
 <?php endif; ?>
@@ -113,7 +152,11 @@
           <td data-label="Status"><?= disb_badge($d['status']) ?></td>
           <td data-label="Auth By" class="muted"><?= e($d['auth_name'] ?? '—') ?></td>
           <td data-label="Auth Date" class="muted"><?= $d['authorized_at'] ? fdate($d['authorized_at']) : '—' ?></td>
-          <td data-label="Notes" class="muted"><?= e($d['notes']?:'—') ?></td>
+          <td data-label="Notes" class="muted">
+            <?php if ($d['notes']): ?>
+              <span class="note-link" onclick="showComment('Notes: Installment #<?= $d['installment_no'] ?>', '<?= e(addslashes($d['notes'])) ?>')">View Note</span>
+            <?php else: ?>—<?php endif; ?>
+          </td>
           <td data-label="Action">
             <?php if ($d['status']===DISB_PENDING && $auth->hasRole(ROLE_OVERALL_INCHARGE)): ?>
             <a href="index.php?page=disbursements.authorize&id=<?= $d['id'] ?>" class="btn btn-warning btn-sm">Authorize</a>
