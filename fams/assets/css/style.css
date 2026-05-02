@@ -502,7 +502,9 @@ textarea { resize:vertical; min-height:90px; }
   .topbar { display:flex; }
   .sidebar {
     transform:translateX(calc(-1 * var(--sidebar-w)));
-    top:var(--topbar-h);
+    top:0; /* Ensure it covers full height when open */
+    bottom:0;
+    height: 100vh;
   }
   .sidebar.open { transform:translateX(0); box-shadow:4px 0 24px rgba(0,0,0,.5); }
   .main-content { margin-left:0; padding-top:var(--topbar-h); }
@@ -511,12 +513,23 @@ textarea { resize:vertical; min-height:90px; }
   .flash-messages { padding:0 1rem; }
   .page-title   { font-size:1.15rem; }
   .card         { padding:1rem; }
-  .form-grid    { grid-template-columns:1fr; }
-  .card-grid    { grid-template-columns:1fr 1fr; }
-  .toolbar      { flex-direction:column; align-items:stretch; }
-  .toolbar-search { flex-direction:column; }
-  .toolbar-search input { max-width:100%; }
-  .btn-group    { flex-direction:column; }
+  
+  /* Form Density */
+  .form-grid    { grid-template-columns: 1fr !important; gap: 1rem; }
+  .detail-grid  { grid-template-columns: 1fr !important; }
+  
+  /* Button stacking for actions */
+  .btn-group    { flex-direction:column; gap: 0.75rem; width: 100%; }
+  .btn-group .btn, .btn-group a.btn { width: 100%; justify-content: center; min-height: 44px; }
+  
+  /* Filter Row stacking */
+  .filter-row-compact { flex-direction: column; align-items: stretch; gap: 1rem; }
+  .filter-group { flex-direction: column; align-items: flex-start; }
+  .filter-actions { flex-direction: column; }
+  .filter-actions button, .filter-actions a { width: 100%; justify-content: center; }
+
+  /* Dashboard stats */
+  .grid-stats { grid-template-columns: 1fr !important; }
 }
 
 @media (max-width:479px) {
