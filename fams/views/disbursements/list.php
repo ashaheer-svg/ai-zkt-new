@@ -42,6 +42,36 @@
     </div>
   </form>
 </div>
+
+<!-- Stats Cards -->
+<?php if (isset($stats)): ?>
+<div class="grid-stats mb-2">
+  <div class="card stat-card">
+    <div class="stat-label">Total Scheduled</div>
+    <div class="stat-value text-large"><?= money($stats['total_scheduled'] ?? 0) ?></div>
+    <div class="stat-hint text-small muted">Based on current filters</div>
+  </div>
+  <div class="card stat-card">
+    <div class="stat-label">Total Released</div>
+    <div class="stat-value text-large text-green"><?= money($stats['total_released'] ?? 0) ?></div>
+    <div class="stat-hint text-small muted">Payments already made</div>
+  </div>
+  <div class="card stat-card">
+    <div class="stat-label">Pending / Balance</div>
+    <div class="stat-value text-large text-orange"><?= money(($stats['total_scheduled'] ?? 0) - ($stats['total_released'] ?? 0)) ?></div>
+    <div class="stat-hint text-small muted">Scheduled but not yet paid</div>
+  </div>
+</div>
+
+<style>
+.grid-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; }
+.stat-card { padding: 1.5rem; display: flex; flex-direction: column; align-items: center; text-align: center; border-left: 4px solid var(--primary); }
+.stat-card .text-green { color: var(--green); border-left-color: var(--green); }
+.stat-card .text-orange { color: var(--orange); border-left-color: var(--orange); }
+.stat-label { font-weight: 600; color: var(--text-muted); font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.5rem; }
+.stat-value { font-size: 1.75rem; font-weight: 800; margin-bottom: 0.25rem; }
+</style>
+<?php endif; ?>
 <?php endif; ?>
 
 <div class="card" style="padding:0">

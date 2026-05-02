@@ -130,6 +130,18 @@ class DisbursementController
             $disbursements = $result['rows'];
             $pagination = $result; // Pass full result for pagination links
             $villages = $pdo->query("SELECT id, name FROM villages WHERE is_active=1 ORDER BY name")->fetchAll();
+
+            // Calculate Totals for the current filters
+            $totalSql = "SELECT 
+                         SUM(d.amount) as total_scheduled,
+                         SUM(CASE WHEN d.status = 'released' THEN d.amount ELSE 0 END) as total_released
+                         FROM disbursements d 
+                         JOIN applications a ON a.id=d.application_id 
+                         JOIN applicants ap ON ap.id=a.applicant_id
+                         WHERE " . implode(" AND ", $where);
+            $stmt = $pdo->prepare($totalSql);
+            $stmt->execute($params);
+            $stats = $stmt->fetch();
         }
 
         $pageTitle = $appId ? 'Disbursements — App #'.$appId : 'All Disbursements';
