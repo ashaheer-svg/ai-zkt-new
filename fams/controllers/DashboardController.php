@@ -80,8 +80,6 @@ class DashboardController
         $myBalance = 0;
         $myInstructions = [];
         if ($auth->role() === ROLE_VILLAGE_INCHARGE) {
-            $myBalance = (float)$pdo->prepare("SELECT balance FROM users WHERE id=?")->execute([$auth->id()]) ? $pdo->prepare("SELECT balance FROM users WHERE id=?")->execute([$auth->id()]) : 0;
-            // Actually I need to fetch it properly
             $stmtBal = $pdo->prepare("SELECT balance FROM users WHERE id=?");
             $stmtBal->execute([$auth->id()]);
             $myBalance = (float)$stmtBal->fetchColumn();
