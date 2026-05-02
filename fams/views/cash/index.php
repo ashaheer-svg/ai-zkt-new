@@ -1,19 +1,60 @@
 <?php require __DIR__ . '/../layout/header.php'; ?>
+<?php require __DIR__ . '/../layout/sidebar.php'; ?>
 
-<div class="page-header">
-    <div class="d-flex align-center" style="justify-content: space-between; width: 100%;">
-        <h1 class="page-title"><?= e($pageTitle) ?></h1>
-        <a href="index.php?page=cash.transfer" class="btn btn-primary">
-            <i class="fas fa-plus"></i> New Transfer
-        </a>
+<div class="card mb-3">
+    <div class="card-title">🏘️ Village In-Charge (1.b) Financial Summary</div>
+    <div class="table-wrap">
+        <table class="table-card">
+            <thead>
+                <tr>
+                    <th>Village In-Charge</th>
+                    <th>Cash in Hand (Balance)</th>
+                    <th>Awaiting Payments (Authorized)</th>
+                    <th>Approved for Disbursement (Scheduled)</th>
+                    <th>Net Requirement</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($userSummary as $u): 
+                    $net = ($u['authorized_amount'] + $u['pending_amount']) - $u['balance'];
+                ?>
+                    <tr>
+                        <td data-label="User">
+                            <strong><?= e($u['full_name']) ?></strong>
+                            <div class="text-muted" style="font-size: 0.8rem;">@<?= e($u['username']) ?></div>
+                        </td>
+                        <td data-label="Cash in Hand" style="font-weight: 600; color: var(--primary);">
+                            <?= money($u['balance']) ?>
+                        </td>
+                        <td data-label="Awaiting Payments" style="color: var(--orange);">
+                            <?= money($u['authorized_amount']) ?>
+                        </td>
+                        <td data-label="Approved" class="muted">
+                            <?= money($u['pending_amount']) ?>
+                        </td>
+                        <td data-label="Net Requirement">
+                            <?php if ($net > 0): ?>
+                                <span style="color: var(--red); font-weight: 600;">+ <?= money($net) ?></span>
+                            <?php else: ?>
+                                <span style="color: var(--success);">Surplus: <?= money(abs($net)) ?></span>
+                            <?php endif; ?>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
     </div>
 </div>
 
-<div class="content-area">
-    <?= flash_html() ?>
+<div class="d-flex justify-between align-center mb-2">
+    <h2 style="font-size: 1.1rem; margin: 0;">📜 Transfer History</h2>
+    <a href="index.php?page=cash.transfer" class="btn btn-primary">
+        <i class="fas fa-plus"></i> New Transfer
+    </a>
+</div>
 
-    <div class="card">
-        <div class="table-wrap">
+<div class="card">
+    <div class="table-wrap">
             <table class="table-card">
                 <thead>
                     <tr>
@@ -45,6 +86,4 @@
         </div>
         <?= render_pagination($pagination) ?>
     </div>
-</div>
-
 <?php require __DIR__ . '/../layout/footer.php'; ?>

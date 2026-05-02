@@ -17,7 +17,25 @@ class CashController
         $transfers = $result['rows'];
         $pagination = $result;
 
-        $pageTitle = 'Cash Transfer History';
+        // Fetch 1.b User Summary
+        $stmtSummary = $pdo->prepare("
+            SELECT 
+                u.id, 
+                u.full_name, 
+                u.username, 
+                u.balance,
+                COALESCE(SUM(CASE WHEN d.status = 'authorized' THEN d.amount ELSE 0 END), 0) as authorized_amount,
+                COALESCE(SUM(CASE WHEN d.status = 'pending' THEN d.amount ELSE 0 END), 0) as pending_amount
+            FROM users u
+            LEFT JOIN disbursements d ON d.assigned_to = u.id
+            WHERE u.role = ? AND u.is_active = 1
+            GROUP BY u.id
+            ORDER BY u.full_name
+        ");
+        $stmtSummary->execute([ROLE_VILLAGE_INCHARGE]);
+        $userSummary = $stmtSummary->fetchAll();
+
+        $pageTitle = 'Cash Transfer Management';
         $activePage = 'cash.transfers';
         require __DIR__ . '/../views/cash/index.php';
     }

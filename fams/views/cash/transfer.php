@@ -1,14 +1,8 @@
 <?php require __DIR__ . '/../layout/header.php'; ?>
+<?php require __DIR__ . '/../layout/sidebar.php'; ?>
 
-<div class="page-header">
-    <h1 class="page-title"><?= e($pageTitle) ?></h1>
-</div>
-
-<div class="content-area">
-    <?= flash_html() ?>
-
-    <div class="card" style="max-width: 600px; margin: 0 auto;">
-        <form method="POST" action="index.php?page=cash.transfer">
+<div class="card" style="max-width: 600px; margin: 0 auto;">
+    <form method="POST" action="index.php?page=cash.transfer">
             <?= csrf_field() ?>
 
             <div class="form-group mb-2">
@@ -40,6 +34,4 @@
             </div>
         </form>
     </div>
-</div>
-
 <?php require __DIR__ . '/../layout/footer.php'; ?>
