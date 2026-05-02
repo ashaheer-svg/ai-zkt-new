@@ -62,6 +62,45 @@ function _migrate(PDO $pdo): void
     if (!in_array('previous_status', $colsB)) {
         $pdo->exec("ALTER TABLE applications ADD COLUMN previous_status TEXT");
     }
+
+    // Add balance to users
+    $colsU = $pdo->query("PRAGMA table_info(users)")->fetchAll(PDO::FETCH_COLUMN, 1);
+    if (!in_array('balance', $colsU)) {
+        $pdo->exec("ALTER TABLE users ADD COLUMN balance REAL DEFAULT 0");
+    }
+
+    // Create cash_transfers table
+    $pdo->exec("CREATE TABLE IF NOT EXISTS cash_transfers (
+        id            INTEGER PRIMARY KEY AUTOINCREMENT,
+        from_user_id  INTEGER NOT NULL,
+        to_user_id    INTEGER NOT NULL,
+        amount        REAL NOT NULL,
+        reference     TEXT,
+        created_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (from_user_id) REFERENCES users(id),
+        FOREIGN KEY (to_user_id)   REFERENCES users(id)
+    )");
+
+    // Add assigned_to and payment fields to disbursements
+    $colsD = $pdo->query("PRAGMA table_info(disbursements)")->fetchAll(PDO::FETCH_COLUMN, 1);
+    if (!in_array('assigned_to', $colsD)) {
+        $pdo->exec("ALTER TABLE disbursements ADD COLUMN assigned_to INTEGER");
+    }
+    if (!in_array('payment_method', $colsD)) {
+        $pdo->exec("ALTER TABLE disbursements ADD COLUMN payment_method TEXT");
+    }
+    if (!in_array('payment_date', $colsD)) {
+        $pdo->exec("ALTER TABLE disbursements ADD COLUMN payment_date DATE");
+    }
+    if (!in_array('payment_reference', $colsD)) {
+        $pdo->exec("ALTER TABLE disbursements ADD COLUMN payment_reference TEXT");
+    }
+    if (!in_array('paid_at', $colsD)) {
+        $pdo->exec("ALTER TABLE disbursements ADD COLUMN paid_at DATETIME");
+    }
+    if (!in_array('paid_by', $colsD)) {
+        $pdo->exec("ALTER TABLE disbursements ADD COLUMN paid_by INTEGER");
+    }
 }
 
 function _createSchema(PDO $pdo): void

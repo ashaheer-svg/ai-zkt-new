@@ -119,10 +119,24 @@ window.onclick = function(event) {
 <?php endif; ?>
 <?php endif; ?>
 
-<div class="card" style="padding:0">
+<form id="bulkForm" method="POST" action="index.php?page=disbursements.bulk_authorize">
+  <?= csrf_field() ?>
+  <div class="d-flex align-center gap-2 mb-1" style="justify-content: space-between;">
+    <div>
+      <?php if ($auth->hasRole(ROLE_OVERALL_INCHARGE)): ?>
+      <button type="submit" class="btn btn-warning btn-sm" id="bulkAuthBtn" disabled>
+        Authorize Selected
+      </button>
+      <?php endif; ?>
+    </div>
+    <div class="text-muted text-small" id="selectedCount">0 items selected</div>
+  </div>
   <div class="table-wrap">
     <table class="table-card table-compact">
       <thead><tr>
+        <?php if ($auth->hasRole(ROLE_OVERALL_INCHARGE)): ?>
+        <th style="width: 40px;"><input type="checkbox" id="selectAll"></th>
+        <?php endif; ?>
         <th>#</th>
         <?php if (!$app): ?>
         <th><?= sort_link('Application', 'app_id') ?></th>
@@ -131,8 +145,8 @@ window.onclick = function(event) {
         <th><?= sort_link('Due Date', 'due_date') ?></th>
         <th><?= sort_link('Amount', 'amount') ?></th>
         <th><?= sort_link('Status', 'status') ?></th>
-        <th>Authorized By</th>
-        <th>Auth Date</th>
+        <th>Assigned To</th>
+        <th>Auth By</th>
         <th>Notes</th>
         <th>Action</th>
       </tr></thead>
@@ -142,6 +156,13 @@ window.onclick = function(event) {
         <?php endif; ?>
         <?php foreach ($disbursements as $d): ?>
         <tr>
+          <?php if ($auth->hasRole(ROLE_OVERALL_INCHARGE)): ?>
+          <td>
+            <?php if ($d['status'] === DISB_PENDING): ?>
+            <input type="checkbox" name="disb_ids[]" value="<?= $d['id'] ?>" class="disb-checkbox">
+            <?php endif; ?>
+          </td>
+          <?php endif; ?>
           <td data-label="#"><?= $d['installment_no'] ?></td>
           <?php if (!$app): ?>
           <td data-label="Application"><a href="index.php?page=applications.view&id=<?= $d['app_id'] ?>">#<?= $d['app_id'] ?> — <?= e($d['applicant_name']) ?></a></td>
@@ -150,8 +171,13 @@ window.onclick = function(event) {
           <td data-label="Due"><?= $d['due_date'] ? fdate($d['due_date']) : '—' ?></td>
           <td data-label="Amount"><strong><?= money($d['amount']) ?></strong></td>
           <td data-label="Status"><?= disb_badge($d['status']) ?></td>
-          <td data-label="Auth By" class="muted"><?= e($d['auth_name'] ?? '—') ?></td>
-          <td data-label="Auth Date" class="muted"><?= $d['authorized_at'] ? fdate($d['authorized_at']) : '—' ?></td>
+          <td data-label="Assigned" class="muted">
+            <?= e($d['assigned_name'] ?? '—') ?>
+          </td>
+          <td data-label="Auth By" class="muted">
+            <?= e($d['auth_name'] ?? '—') ?>
+            <div style="font-size: 0.7rem;"><?= $d['authorized_at'] ? fdate($d['authorized_at']) : '' ?></div>
+          </td>
           <td data-label="Notes" class="muted">
             <?php if ($d['notes']): ?>
               <span class="note-link" onclick="showComment('Notes: Installment #<?= $d['installment_no'] ?>', '<?= e(addslashes($d['notes'])) ?>')">View Note</span>
@@ -160,11 +186,8 @@ window.onclick = function(event) {
           <td data-label="Action">
             <?php if ($d['status']===DISB_PENDING && $auth->hasRole(ROLE_OVERALL_INCHARGE)): ?>
             <a href="index.php?page=disbursements.authorize&id=<?= $d['id'] ?>" class="btn btn-warning btn-sm">Authorize</a>
-            <?php elseif ($d['status']===DISB_AUTHORIZED && $auth->hasRole(ROLE_OVERALL_INCHARGE)): ?>
-            <form method="POST" action="index.php?page=disbursements.release" style="display:inline">
-              <?= csrf_field() ?><input type="hidden" name="id" value="<?= $d['id'] ?>">
-              <button type="submit" class="btn btn-success btn-sm" data-confirm="Mark installment #<?= $d['installment_no'] ?> as released?">Release</button>
-            </form>
+            <?php elseif ($d['status']===DISB_AUTHORIZED && ($auth->hasRole(ROLE_OVERALL_INCHARGE) || $auth->id() == $d['assigned_to'])): ?>
+            <a href="index.php?page=disbursements.release&id=<?= $d['id'] ?>" class="btn btn-success btn-sm">Release</a>
             <?php else: ?><span class="text-muted">—</span><?php endif; ?>
           </td>
         </tr>
@@ -173,6 +196,25 @@ window.onclick = function(event) {
     </table>
   </div>
 </div>
+</form>
+
+<script>
+document.getElementById('selectAll')?.addEventListener('change', function() {
+  const checkboxes = document.querySelectorAll('.disb-checkbox');
+  checkboxes.forEach(cb => cb.checked = this.checked);
+  updateSelectedCount();
+});
+
+document.querySelectorAll('.disb-checkbox').forEach(cb => {
+  cb.addEventListener('change', updateSelectedCount);
+});
+
+function updateSelectedCount() {
+  const checked = document.querySelectorAll('.disb-checkbox:checked').length;
+  document.getElementById('selectedCount').innerText = checked + ' items selected';
+  document.getElementById('bulkAuthBtn').disabled = checked === 0;
+}
+</script>
 
 <?php if (!$app && isset($pagination)): ?>
 <div class="pagination-container mt-2">

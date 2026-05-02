@@ -25,6 +25,7 @@ require_once __DIR__ . '/controllers/DashboardController.php';
 require_once __DIR__ . '/controllers/ApplicationController.php';
 require_once __DIR__ . '/controllers/DisbursementController.php';
 require_once __DIR__ . '/controllers/AdminController.php';
+require_once __DIR__ . '/controllers/CashController.php';
 
 $pdo    = getDB();
 $auth   = new Auth($pdo);
@@ -35,7 +36,7 @@ if ($page === '') {
     if (!$auth->isLoggedIn()) {
         $page = 'login';
     } else {
-        $page = $auth->hasRole([ROLE_SYSADMIN, ROLE_OVERALL_INCHARGE]) ? 'dashboard' : 'applications';
+        $page = $auth->hasRole([ROLE_SYSADMIN, ROLE_OVERALL_INCHARGE, ROLE_VILLAGE_INCHARGE]) ? 'dashboard' : 'applications';
     }
 }
 
@@ -90,8 +91,13 @@ match (true) {
     // Disbursements
     $page === 'disbursements'           => DisbursementController::list($pdo, $auth, $logger),
     $page === 'disbursements.schedule'  => DisbursementController::schedule($pdo, $auth, $logger),
-    $page === 'disbursements.authorize' => DisbursementController::authorize($pdo, $auth, $logger),
-    $page === 'disbursements.release'   => DisbursementController::release($pdo, $auth, $logger),
+    $page === 'disbursements.authorize'      => DisbursementController::authorize($pdo, $auth, $logger),
+    $page === 'disbursements.bulk_authorize' => DisbursementController::bulkAuthorize($pdo, $auth, $logger),
+    $page === 'disbursements.release'        => DisbursementController::release($pdo, $auth, $logger),
+
+    // Cash Management
+    $page === 'cash.transfers' => CashController::index($pdo, $auth, $logger),
+    $page === 'cash.transfer'  => CashController::transfer($pdo, $auth, $logger),
 
     // Admin
     $page === 'admin.users'      => AdminController::users($pdo, $auth, $logger),

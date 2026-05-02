@@ -1,0 +1,81 @@
+<?php
+class CashController
+{
+    public static function index(PDO $pdo, Auth $auth, Logger $logger): void
+    {
+        $auth->requireRole([ROLE_OVERALL_INCHARGE, ROLE_SYSADMIN]);
+
+        $sql = "SELECT ct.*, f.full_name as from_name, t.full_name as to_name 
+                FROM cash_transfers ct 
+                JOIN users f ON f.id = ct.from_user_id
+                JOIN users t ON t.id = ct.to_user_id
+                ORDER BY ct.created_at DESC";
+        
+        $page = max(1, (int)($_GET['p'] ?? 1));
+        $result = paginate($pdo, $sql, [], $page);
+        
+        $transfers = $result['rows'];
+        $pagination = $result;
+
+        $pageTitle = 'Cash Transfer History';
+        $activePage = 'cash.transfers';
+        require __DIR__ . '/../views/cash/index.php';
+    }
+
+    public static function transfer(PDO $pdo, Auth $auth, Logger $logger): void
+    {
+        $auth->requireRole([ROLE_OVERALL_INCHARGE, ROLE_SYSADMIN]);
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            csrf_verify();
+            $toUserId = (int)$_POST['to_user_id'];
+            $amount = (float)$_POST['amount'];
+            $reference = trim($_POST['reference'] ?? '');
+
+            if ($amount <= 0) {
+                flash('error', 'Amount must be greater than zero.');
+                redirect('index.php?page=cash.transfer');
+            }
+
+            // Verify target user is a 1.b user (Village In-Charge)
+            $stmt = $pdo->prepare("SELECT role FROM users WHERE id = ?");
+            $stmt->execute([$toUserId]);
+            $toUser = $stmt->fetch();
+
+            if (!$toUser || $toUser['role'] !== ROLE_VILLAGE_INCHARGE) {
+                flash('error', 'Transfers can only be made to Village In-Charge (1.b) users.');
+                redirect('index.php?page=cash.transfer');
+            }
+
+            $pdo->beginTransaction();
+            try {
+                // Record transfer
+                $stmt = $pdo->prepare("INSERT INTO cash_transfers (from_user_id, to_user_id, amount, reference) VALUES (?, ?, ?, ?)");
+                $stmt->execute([$auth->id(), $toUserId, $amount, $reference]);
+
+                // Update 1.b balance
+                $stmt = $pdo->prepare("UPDATE users SET balance = balance + ? WHERE id = ?");
+                $stmt->execute([$amount, $toUserId]);
+
+                $logger->activity($auth->id(), 'cash_transfer', 'user', $toUserId);
+                $pdo->commit();
+
+                flash('success', 'Transferred ' . money($amount) . ' successfully.');
+                redirect('index.php?page=cash.transfers');
+            } catch (Exception $e) {
+                $pdo->rollBack();
+                flash('error', 'Failed to complete transfer: ' . $e->getMessage());
+                redirect('index.php?page=cash.transfer');
+            }
+        }
+
+        // Fetch all 1.b users
+        $stmt = $pdo->prepare("SELECT id, full_name, username, balance FROM users WHERE role = ? AND is_active = 1 ORDER BY full_name");
+        $stmt->execute([ROLE_VILLAGE_INCHARGE]);
+        $villageIncharges = $stmt->fetchAll();
+
+        $pageTitle = 'Transfer Funds to Village In-Charge';
+        $activePage = 'cash.transfers';
+        require __DIR__ . '/../views/cash/transfer.php';
+    }
+}

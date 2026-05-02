@@ -19,6 +19,18 @@
     <?= csrf_field() ?>
     <input type="hidden" name="id" value="<?= $disb['id'] ?>">
     <div class="form-group mb-2">
+      <label>Assign To (For Payment)</label>
+      <select name="assigned_to" required>
+        <option value="">-- Select Person --</option>
+        <?php foreach ($assignableUsers as $au): ?>
+          <option value="<?= $au['id'] ?>">
+            <?= e($au['full_name']) ?> (<?= role_label($au['role']) ?>)
+          </option>
+        <?php endforeach; ?>
+      </select>
+      <p class="form-hint">Select the 1.b or 1.c user who will be responsible for making this payment.</p>
+    </div>
+    <div class="form-group mb-2">
       <label>Authorization Comment</label>
       <textarea name="comment" placeholder="Authorization notes (optional)…"></textarea>
     </div>

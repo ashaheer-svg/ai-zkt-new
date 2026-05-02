@@ -1,6 +1,53 @@
 <?php require __DIR__ . '/../layout/header.php'; ?>
 <?php require __DIR__ . '/../layout/sidebar.php'; ?>
 
+<!-- 1.b Specific Section -->
+<?php if ($auth->role() === ROLE_VILLAGE_INCHARGE): ?>
+<div class="card mb-2" style="background: linear-gradient(135deg, var(--surface), var(--card)); border-left: 5px solid var(--primary);">
+    <div class="d-flex align-center" style="justify-content: space-between;">
+        <div>
+            <div class="stat-label">My Available Balance</div>
+            <div class="stat-value" style="font-size: 2rem; color: var(--primary);"><?= money($myBalance) ?></div>
+            <div class="stat-sub">Funds allocated for village distribution</div>
+        </div>
+        <div style="font-size: 3rem; opacity: 0.2;">💰</div>
+    </div>
+</div>
+
+<div class="card mb-2">
+    <div class="card-title">📥 Pending Payment Instructions</div>
+    <?php if ($myInstructions): ?>
+    <div class="table-wrap">
+        <table class="table-card">
+            <thead>
+                <tr>
+                    <th>Applicant</th><th>Village</th><th>Installment</th><th>Amount</th><th>Due Date</th><th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($myInstructions as $inst): ?>
+                <tr>
+                    <td data-label="Applicant"><?= e($inst['applicant_name']) ?></td>
+                    <td data-label="Village"><?= e($inst['village_name']) ?></td>
+                    <td data-label="Installment">#<?= $inst['installment_no'] ?></td>
+                    <td data-label="Amount"><strong><?= money($inst['amount']) ?></strong></td>
+                    <td data-label="Due"><?= fdate($inst['due_date']) ?></td>
+                    <td data-label="Action">
+                        <a href="index.php?page=disbursements.release&id=<?= $inst['id'] ?>" class="btn btn-success btn-sm">Mark as Paid</a>
+                    </td>
+                </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
+    <?php else: ?>
+    <p class="text-muted" style="padding: 1rem; text-align: center;">No pending payment instructions assigned to you.</p>
+    <?php endif; ?>
+</div>
+<?php endif; ?>
+
+<!-- 1.c / Admin Section -->
+<?php if ($auth->hasRole([ROLE_OVERALL_INCHARGE, ROLE_SYSADMIN])): ?>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
 <!-- Stat cards -->
@@ -140,5 +187,6 @@
   <p class="text-muted text-small">No activity yet.</p>
   <?php endif; ?>
 </div>
+<?php endif; ?>
 
 <?php require __DIR__ . '/../layout/footer.php'; ?>

@@ -3,7 +3,7 @@ class DashboardController
 {
     public static function overview(PDO $pdo, Auth $auth, Logger $logger): void
     {
-        $auth->requireRole([ROLE_OVERALL_INCHARGE, ROLE_SYSADMIN]);
+        $auth->requireRole([ROLE_OVERALL_INCHARGE, ROLE_SYSADMIN, ROLE_VILLAGE_INCHARGE]);
 
         // ── Application counts by status ──────────────────────────────────────
         $stmt = $pdo->query("
@@ -75,6 +75,29 @@ class DashboardController
             LIMIT 20
         ");
         $recentActivity = $stmt->fetchAll();
+
+        // ── 1.b Specific Data ────────────────────────────────────────────────
+        $myBalance = 0;
+        $myInstructions = [];
+        if ($auth->role() === ROLE_VILLAGE_INCHARGE) {
+            $myBalance = (float)$pdo->prepare("SELECT balance FROM users WHERE id=?")->execute([$auth->id()]) ? $pdo->prepare("SELECT balance FROM users WHERE id=?")->execute([$auth->id()]) : 0;
+            // Actually I need to fetch it properly
+            $stmtBal = $pdo->prepare("SELECT balance FROM users WHERE id=?");
+            $stmtBal->execute([$auth->id()]);
+            $myBalance = (float)$stmtBal->fetchColumn();
+
+            $stmtInst = $pdo->prepare("
+                SELECT d.*, ap.full_name as applicant_name, v.name as village_name
+                FROM disbursements d
+                JOIN applications a ON a.id = d.application_id
+                JOIN applicants ap ON ap.id = a.applicant_id
+                JOIN villages v ON v.id = ap.village_id
+                WHERE d.assigned_to = ? AND d.status = 'authorized'
+                ORDER BY d.due_date ASC
+            ");
+            $stmtInst->execute([$auth->id()]);
+            $myInstructions = $stmtInst->fetchAll();
+        }
 
         $pageTitle  = 'Overview Dashboard';
         $activePage = 'dashboard';

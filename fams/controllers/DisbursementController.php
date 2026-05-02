@@ -74,7 +74,11 @@ class DisbursementController
             if (!$app || !$auth->canViewApplication($app)) {
                 flash('error','Access denied.'); redirect('index.php?page=applications');
             }
-            $stmt = $pdo->prepare("SELECT d.*,u.full_name AS auth_name FROM disbursements d LEFT JOIN users u ON u.id=d.authorized_by WHERE d.application_id=? ORDER BY d.installment_no");
+            $stmt = $pdo->prepare("SELECT d.*,u.full_name AS auth_name, ua.full_name as assigned_name 
+                                   FROM disbursements d 
+                                   LEFT JOIN users u ON u.id=d.authorized_by 
+                                   LEFT JOIN users ua ON ua.id=d.assigned_to
+                                   WHERE d.application_id=? ORDER BY d.installment_no");
             $stmt->execute([$appId]); $disbursements = $stmt->fetchAll();
         } else {
             // Global view (1.c / sysadmin)
@@ -115,31 +119,39 @@ class DisbursementController
             $orderBy = "d.$sortField";
             if ($sortField === 'applicant_name') $orderBy = "ap.full_name";
             if ($sortField === 'village_name')   $orderBy = "v.name";
-
-            $sql = "SELECT d.*,a.id AS app_id,ap.full_name AS applicant_name,v.name AS village_name,u.full_name AS auth_name
+            $sql = "SELECT d.*, ap.full_name AS applicant_name, v.name AS village_name, u.full_name AS auth_name, ua.full_name as assigned_name
                     FROM disbursements d 
-                    JOIN applications a ON a.id=d.application_id 
-                    JOIN applicants ap ON ap.id=a.applicant_id
-                    JOIN villages v ON v.id=ap.village_id 
-                    LEFT JOIN users u ON u.id=d.authorized_by
-                    WHERE " . implode(" AND ", $where) . "
-                    ORDER BY $orderBy $sortOrder, d.id ASC";
+                    JOIN applications a ON a.id = d.application_id 
+                    JOIN applicants ap ON ap.id = a.applicant_id 
+                    JOIN villages v ON v.id = ap.village_id 
+                    LEFT JOIN users u ON u.id = d.authorized_by
+                    LEFT JOIN users ua ON ua.id = d.assigned_to
+                    WHERE " . implode(' AND ', $where);
             
-            $page   = max(1,(int)($_GET['p']??1));
-            $result = paginate($pdo, $sql, $params, $page);
-            $disbursements = $result['rows'];
-            $pagination = $result; // Pass full result for pagination links
-            $villages = $pdo->query("SELECT id, name FROM villages WHERE is_active=1 ORDER BY name")->fetchAll();
+            $sortMap = [
+                'app_id'       => 'd.application_id',
+                'village_name' => 'v.name',
+                'due_date'     => 'd.due_date',
+                'amount'       => 'd.amount',
+                'status'       => 'd.status'
+            ];
+            $order = $sortMap[$_GET['sort'] ?? ''] ?? 'd.due_date';
+            $dir   = strtoupper($_GET['dir'] ?? '') === 'DESC' ? 'DESC' : 'ASC';
+            $sql .= " ORDER BY $order $dir";
 
-            // Calculate Totals for the current filters
-            $totalSql = "SELECT 
-                         SUM(d.amount) as total_scheduled,
-                         SUM(CASE WHEN d.status = 'released' THEN d.amount ELSE 0 END) as total_released
-                         FROM disbursements d 
-                         JOIN applications a ON a.id=d.application_id 
-                         JOIN applicants ap ON ap.id=a.applicant_id
-                         WHERE " . implode(" AND ", $where);
-            $stmt = $pdo->prepare($totalSql);
+            $page = max(1, (int)($_GET['p'] ?? 1));
+            $pagination = paginate($pdo, $sql, $params, $page);
+            $disbursements = $pagination['rows'];
+
+            $villages = $pdo->query("SELECT id, name FROM villages ORDER BY name")->fetchAll();
+            
+            // Stats
+            $stmt = $pdo->prepare("SELECT SUM(amount) as total_scheduled, 
+                                          SUM(CASE WHEN status='released' THEN amount ELSE 0 END) as total_released
+                                   FROM disbursements d
+                                   JOIN applications a ON a.id = d.application_id
+                                   JOIN applicants ap ON ap.id = a.applicant_id
+                                   WHERE " . implode(' AND ', $where));
             $stmt->execute($params);
             $stats = $stmt->fetch();
         }
@@ -163,43 +175,142 @@ class DisbursementController
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             csrf_verify();
             $comment = trim($_POST['comment'] ?? '');
-            $pdo->prepare("UPDATE disbursements SET status='authorized',authorized_by=?,authorized_at=CURRENT_TIMESTAMP,notes=? WHERE id=?")
-                ->execute([$auth->id(),$comment,$id]);
-            $logger->appLog((int)$disb['application_id'],$auth->id(),'disbursement_authorized',"Installment #".$disb['installment_no'].". ".$comment);
+            $assignedTo = (int)$_POST['assigned_to'];
+
+            $pdo->prepare("UPDATE disbursements SET status='authorized',authorized_by=?,authorized_at=CURRENT_TIMESTAMP,notes=?,assigned_to=? WHERE id=?")
+                ->execute([$auth->id(),$comment,$assignedTo,$id]);
+            
+            $logger->appLog((int)$disb['application_id'],$auth->id(),'disbursement_authorized',"Installment #".$disb['installment_no'].". Assigned to: $assignedTo. ".$comment);
             $logger->activity($auth->id(),'authorize_disbursement','disbursement',$id);
             flash('success','Disbursement #'.$disb['installment_no'].' authorized.');
             redirect('index.php?page=disbursements&app_id='.$disb['application_id']);
         }
 
+        // Fetch 1.b and 1.c users for assignment
+        $stmtUsers = $pdo->prepare("SELECT id, full_name, role FROM users WHERE role IN (?, ?) AND is_active = 1 ORDER BY role, full_name");
+        $stmtUsers->execute([ROLE_VILLAGE_INCHARGE, ROLE_OVERALL_INCHARGE]);
+        $assignableUsers = $stmtUsers->fetchAll();
+
         $pageTitle = 'Authorize Disbursement'; $activePage = 'disbursements';
         require __DIR__ . '/../views/disbursements/authorize.php';
     }
 
-    // ── Release installment (1.c marks as paid) ───────────────────────────────
-    public static function release(PDO $pdo, Auth $auth, Logger $logger): void
+    public static function bulkAuthorize(PDO $pdo, Auth $auth, Logger $logger): void
     {
         $auth->requireRole(ROLE_OVERALL_INCHARGE);
         csrf_verify();
-        $id   = (int)($_POST['id'] ?? 0);
-        $stmt = $pdo->prepare("SELECT * FROM disbursements WHERE id=?"); $stmt->execute([$id]); $disb = $stmt->fetch();
+
+        $ids = (array)($_POST['disb_ids'] ?? []);
+        if (empty($ids)) {
+            flash('error', 'No disbursements selected.');
+            redirect('index.php?page=disbursements');
+        }
+
+        $pdo->beginTransaction();
+        try {
+            $stmt = $pdo->prepare("UPDATE disbursements SET status='authorized', authorized_by=?, authorized_at=CURRENT_TIMESTAMP WHERE id=? AND status='pending'");
+            foreach ($ids as $id) {
+                // For bulk, we might not assign to a specific 1.b user yet, or we default to the first one in village.
+                // To keep it simple for now, we just authorize. The assignment can happen individually or we can add it here.
+                // User said: "1.c level user should be able to select multiple projects at once for disbursement approval."
+                $stmt->execute([$auth->id(), (int)$id]);
+                
+                // Get application ID for logging
+                $appStmt = $pdo->prepare("SELECT application_id FROM disbursements WHERE id=?");
+                $appStmt->execute([$id]);
+                $appId = $appStmt->fetchColumn();
+                if ($appId) {
+                    $logger->appLog((int)$appId, $auth->id(), 'disbursement_authorized', "Bulk authorized.");
+                }
+            }
+            $pdo->commit();
+            flash('success', count($ids) . ' disbursements authorized.');
+        } catch (Exception $e) {
+            $pdo->rollBack();
+            flash('error', 'Bulk authorization failed.');
+        }
+        redirect('index.php?page=disbursements');
+    }
+
+    // ── Release installment (1.b or 1.c marks as paid) ───────────────────────
+    public static function release(PDO $pdo, Auth $auth, Logger $logger): void
+    {
+        $auth->requireLogin();
+        $id = (int)($_GET['id'] ?? $_POST['id'] ?? 0);
+        $stmt = $pdo->prepare("SELECT d.*, a.id as app_id, a.applicant_id, ap.full_name as applicant_name FROM disbursements d JOIN applications a ON a.id = d.application_id JOIN applicants ap ON ap.id = a.applicant_id WHERE d.id = ?");
+        $stmt->execute([$id]);
+        $disb = $stmt->fetch();
+
         if (!$disb || $disb['status'] !== DISB_AUTHORIZED) {
-            flash('error','Must be authorized before release.'); redirect('index.php?page=disbursements');
-        }
-        $notes = trim($_POST['notes'] ?? '');
-        $pdo->prepare("UPDATE disbursements SET status='released',notes=? WHERE id=?")->execute([$notes,$id]);
-
-        // Check if all installments for this application are released
-        $pending = (int)$pdo->prepare("SELECT COUNT(*) FROM disbursements WHERE application_id=? AND status!='released' AND status!='cancelled'")->execute([$disb['application_id']]) ? 0 : 0;
-        $stmtChk = $pdo->prepare("SELECT COUNT(*) FROM disbursements WHERE application_id=? AND status NOT IN ('released','cancelled')");
-        $stmtChk->execute([$disb['application_id']]); $remaining = (int)$stmtChk->fetchColumn();
-        if ($remaining === 0) {
-            $pdo->prepare("UPDATE applications SET status='completed',updated_at=CURRENT_TIMESTAMP WHERE id=?")->execute([$disb['application_id']]);
-            $logger->appLog((int)$disb['application_id'],$auth->id(),'completed','All disbursements released.');
+            flash('error', 'Disbursement not available for release.');
+            redirect('index.php?page=disbursements');
         }
 
-        $logger->appLog((int)$disb['application_id'],$auth->id(),'disbursement_released',"Installment #".$disb['installment_no'].". ".$notes);
-        $logger->activity($auth->id(),'release_disbursement','disbursement',$id);
-        flash('success','Payment released.');
-        redirect('index.php?page=disbursements&app_id='.$disb['application_id']);
+        // Access check: Either 1.c, or the assigned 1.b user
+        $is1c = $auth->hasRole([ROLE_OVERALL_INCHARGE, ROLE_SYSADMIN]);
+        $isAssigned = ($disb['assigned_to'] == $auth->id());
+
+        if (!$is1c && !$isAssigned) {
+            flash('error', 'You are not authorized to release this payment.');
+            redirect('index.php?page=disbursements');
+        }
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            csrf_verify();
+            $method = $_POST['payment_method'] ?? '';
+            $date = $_POST['payment_date'] ?? date('Y-m-d');
+            $ref = trim($_POST['payment_reference'] ?? '');
+            $notes = trim($_POST['notes'] ?? '');
+
+            if (empty($method)) {
+                flash('error', 'Payment method is required.');
+                redirect('index.php?page=disbursements.release&id=' . $id);
+            }
+
+            $pdo->beginTransaction();
+            try {
+                // If 1.b is releasing, check and deduct balance
+                if (!$is1c) {
+                    $stmtBal = $pdo->prepare("SELECT balance FROM users WHERE id = ?");
+                    $stmtBal->execute([$auth->id()]);
+                    $balance = (float)$stmtBal->fetchColumn();
+
+                    if ($balance < $disb['amount']) {
+                        throw new Exception("Insufficient balance. Your current balance is " . money($balance));
+                    }
+
+                    $pdo->prepare("UPDATE users SET balance = balance - ? WHERE id = ?")
+                        ->execute([$disb['amount'], $auth->id()]);
+                }
+
+                // Update disbursement
+                $pdo->prepare("UPDATE disbursements SET status='released', payment_method=?, payment_date=?, payment_reference=?, notes=?, paid_at=CURRENT_TIMESTAMP, paid_by=? WHERE id=?")
+                    ->execute([$method, $date, $ref, $notes, $auth->id(), $id]);
+
+                // Check if application is completed
+                $stmtRemaining = $pdo->prepare("SELECT COUNT(*) FROM disbursements WHERE application_id=? AND status NOT IN ('released','cancelled')");
+                $stmtRemaining->execute([$disb['application_id']]);
+                if ((int)$stmtRemaining->fetchColumn() === 0) {
+                    $pdo->prepare("UPDATE applications SET status='completed', updated_at=CURRENT_TIMESTAMP WHERE id=?")
+                        ->execute([$disb['application_id']]);
+                    $logger->appLog((int)$disb['application_id'], $auth->id(), 'completed', 'All disbursements released.');
+                }
+
+                $logger->appLog((int)$disb['application_id'], $auth->id(), 'disbursement_released', "Installment #" . $disb['installment_no'] . " via $method. Date: $date");
+                $logger->activity($auth->id(), 'release_disbursement', 'disbursement', $id);
+                
+                $pdo->commit();
+                flash('success', 'Payment released successfully.');
+                redirect('index.php?page=disbursements&app_id=' . $disb['application_id']);
+            } catch (Exception $e) {
+                $pdo->rollBack();
+                flash('error', $e->getMessage());
+                redirect('index.php?page=disbursements.release&id=' . $id);
+            }
+        }
+
+        $pageTitle = 'Release Payment — Installment #' . $disb['installment_no'];
+        $activePage = 'disbursements';
+        require __DIR__ . '/../views/disbursements/release.php';
     }
 }

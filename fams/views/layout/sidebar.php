@@ -6,7 +6,7 @@ $u    = $auth->user();
 $nav = [];
 
 // Dashboard
-if (in_array($role,[ROLE_OVERALL_INCHARGE,ROLE_SYSADMIN])) {
+if (in_array($role,[ROLE_OVERALL_INCHARGE,ROLE_SYSADMIN,ROLE_VILLAGE_INCHARGE])) {
     $nav[] = ['page'=>'dashboard','icon'=>'📊','label'=>'Dashboard'];
 }
 
@@ -21,6 +21,7 @@ if (in_array($role,[ROLE_DATA_ENTRY,ROLE_VILLAGE_INCHARGE,ROLE_OVERALL_INCHARGE,
 // Disbursements & Allocations
 if (in_array($role,[ROLE_OVERALL_INCHARGE,ROLE_SYSADMIN])) {
     $nav[] = ['page'=>'disbursements',     'icon'=>'🏦','label'=>'Disbursements'];
+    $nav[] = ['page'=>'cash.transfers',     'icon'=>'💸','label'=>'Cash Transfers'];
     $nav[] = ['page'=>'admin.allocations', 'icon'=>'💰','label'=>'Allocations'];
 }
 
