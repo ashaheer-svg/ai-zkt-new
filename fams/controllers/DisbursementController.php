@@ -80,13 +80,56 @@ class DisbursementController
             // Global view (1.c / sysadmin)
             $auth->requireRole([ROLE_OVERALL_INCHARGE, ROLE_SYSADMIN]);
             $app = null;
+            
+            $where = ["1=1"];
+            $params = [];
+
+            // Village filter
+            $villageId = (int)($_GET['village_id'] ?? 0);
+            if ($villageId) {
+                $where[] = "ap.village_id = ?";
+                $params[] = $villageId;
+            }
+
+            // Period filter
+            $period = $_GET['period'] ?? '';
+            if ($period) {
+                if ($period === 'month') {
+                    $where[] = "strftime('%Y-%m', d.due_date) = strftime('%Y-%m', 'now')";
+                } elseif ($period === 'quarter') {
+                    // Current quarter: 1 (Jan-Mar), 2 (Apr-Jun), 3 (Jul-Sep), 4 (Oct-Dec)
+                    $where[] = "((strftime('%m','now')-1)/3) = ((strftime('%m', d.due_date)-1)/3) AND strftime('%Y','now') = strftime('%Y', d.due_date)";
+                } elseif ($period === 'year') {
+                    $where[] = "strftime('%Y', d.due_date) = strftime('%Y', 'now')";
+                }
+            }
+
+            // Sorting
+            $sortField = $_GET['sort'] ?? 'due_date';
+            $sortOrder = strtoupper($_GET['order'] ?? 'ASC');
+            $allowedSorts = ['due_date', 'amount', 'applicant_name', 'village_name', 'status'];
+            if (!in_array($sortField, $allowedSorts)) $sortField = 'due_date';
+            if (!in_array($sortOrder, ['ASC', 'DESC'])) $sortOrder = 'ASC';
+
+            // Custom sort mapping if needed
+            $orderBy = "d.$sortField";
+            if ($sortField === 'applicant_name') $orderBy = "ap.full_name";
+            if ($sortField === 'village_name')   $orderBy = "v.name";
+
             $sql = "SELECT d.*,a.id AS app_id,ap.full_name AS applicant_name,v.name AS village_name,u.full_name AS auth_name
-                    FROM disbursements d JOIN applications a ON a.id=d.application_id JOIN applicants ap ON ap.id=a.applicant_id
-                    JOIN villages v ON v.id=ap.village_id LEFT JOIN users u ON u.id=d.authorized_by
-                    ORDER BY d.due_date ASC, d.id ASC";
+                    FROM disbursements d 
+                    JOIN applications a ON a.id=d.application_id 
+                    JOIN applicants ap ON ap.id=a.applicant_id
+                    JOIN villages v ON v.id=ap.village_id 
+                    LEFT JOIN users u ON u.id=d.authorized_by
+                    WHERE " . implode(" AND ", $where) . "
+                    ORDER BY $orderBy $sortOrder, d.id ASC";
+            
             $page   = max(1,(int)($_GET['p']??1));
-            $result = paginate($pdo, $sql, [], $page);
+            $result = paginate($pdo, $sql, $params, $page);
             $disbursements = $result['rows'];
+            $pagination = $result; // Pass full result for pagination links
+            $villages = $pdo->query("SELECT id, name FROM villages WHERE is_active=1 ORDER BY name")->fetchAll();
         }
 
         $pageTitle = $appId ? 'Disbursements — App #'.$appId : 'All Disbursements';
