@@ -146,8 +146,8 @@ class DisbursementController
             $villages = $pdo->query("SELECT id, name FROM villages ORDER BY name")->fetchAll();
             
             // Stats
-            $stmt = $pdo->prepare("SELECT SUM(amount) as total_scheduled, 
-                                          SUM(CASE WHEN status='released' THEN amount ELSE 0 END) as total_released
+            $stmt = $pdo->prepare("SELECT SUM(d.amount) as total_scheduled, 
+                                          SUM(CASE WHEN d.status='released' THEN d.amount ELSE 0 END) as total_released
                                    FROM disbursements d
                                    JOIN applications a ON a.id = d.application_id
                                    JOIN applicants ap ON ap.id = a.applicant_id
