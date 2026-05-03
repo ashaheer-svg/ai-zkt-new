@@ -209,8 +209,12 @@ class ApplicationController
             $d = $_POST;
             $isDraft = isset($d['save_draft']);
 
+            // In edit mode, village_id might be disabled and thus missing from POST
+            if (!isset($d['village_id'])) {
+                $d['village_id'] = $app['village_id'];
+            }
+
             if (empty($d['full_name']))   $errors[] = 'Full name required.';
-            // Village is usually hidden/disabled in edit, but let's be safe
             if (empty($d['village_id']))  $errors[] = 'Village is required.';
             
             if (!$isDraft) {

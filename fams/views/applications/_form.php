@@ -217,7 +217,11 @@ $isEdit = $isEdit ?? false;
 
   <div class="btn-group mt-2">
     <button type="submit" class="btn btn-primary">
-      <?= $isEdit ? '💾 Save Changes' : '📤 Submit Application' ?>
+      <?php if ($isEdit): ?>
+        <?= ($app['status'] ?? '') === STATUS_DRAFT ? '📤 Submit Application' : '💾 Save Changes' ?>
+      <?php else: ?>
+        📤 Submit Application
+      <?php endif; ?>
     </button>
     <button type="submit" name="save_draft" value="1" class="btn btn-outline" formnovalidate>
       📂 Save as Draft
