@@ -119,7 +119,7 @@ class DisbursementController
             $orderBy = "d.$sortField";
             if ($sortField === 'applicant_name') $orderBy = "ap.full_name";
             if ($sortField === 'village_name')   $orderBy = "v.name";
-            $sql = "SELECT d.*, a.id AS app_id, ap.full_name AS applicant_name, v.name AS village_name, u.full_name AS auth_name, ua.full_name as assigned_name
+            $sql = "SELECT d.*, a.id AS app_id, ap.full_name AS applicant_name, v.name AS village_name, v.district as village_district, u.full_name AS auth_name, ua.full_name as assigned_name
                     FROM disbursements d 
                     JOIN applications a ON a.id = d.application_id 
                     JOIN applicants ap ON ap.id = a.applicant_id 

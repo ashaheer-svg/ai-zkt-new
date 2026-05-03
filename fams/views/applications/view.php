@@ -230,6 +230,7 @@
   <div class="card">
     <div class="card-title">💰 Assistance</div>
     <div class="detail-grid">
+      <div class="detail-item"><div class="detail-label">Village / Thackiya</div><div class="detail-value"><?= e($app['village_name']) ?> (<?= e($app['village_district'] ?: '—') ?>)</div></div>
       <div class="detail-item"><div class="detail-label">Category</div><div class="detail-value"><?= e($app['category_name'] ?? '—') ?></div></div>
       <div class="detail-item"><div class="detail-label">Requested Schedule</div><div class="detail-value"><?= DISB_LABELS[$app['requested_type']??''] ?? 'One Time' ?></div></div>
       <div class="detail-item"><div class="detail-label">Installment Amount</div><div class="detail-value"><?= money($app['requested_installment'] ?? $app['amount_requested']) ?></div></div>

@@ -51,7 +51,7 @@
         <tr class="<?= in_array($a['status'],[STATUS_DRAFT,STATUS_PENDING_VALIDATION]) ? 'draft-row' : '' ?>">
           <td data-label="#"><?= $a['id'] ?><?= $a['is_privileged'] ? ' <span class="privilege-tag">🔒 Priv</span>' : '' ?></td>
           <td data-label="Applicant"><strong><?= e($a['applicant_name']) ?></strong><br><span class="text-small text-muted"><?= e($a['id_number'] ?? '') ?></span></td>
-          <td data-label="Village"><?= e($a['village_name']) ?></td>
+          <td data-label="Village"><?= e($a['village_name']) ?><br><span class="text-tiny muted"><?= e($a['village_district'] ?: '') ?></span></td>
           <td data-label="Category"><?= e($a['category_name']) ?></td>
           <td data-label="Amount"><?= money($a['amount_requested']) ?></td>
           <td data-label="Status"><?= status_badge($a['status']) ?></td>

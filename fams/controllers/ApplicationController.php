@@ -46,7 +46,7 @@ class ApplicationController
         if ($filterStatus) { $where[] = 'a.status = ?'; $params[] = $filterStatus; }
 
         $sql = "SELECT a.*, ap.full_name AS applicant_name, ap.id_number,
-                       ap.village_id, v.name AS village_name, fc.name AS category_name,
+                       ap.village_id, v.name AS village_name, v.district as village_district, fc.name AS category_name,
                        u.full_name AS creator_name
                 FROM applications a
                 JOIN applicants ap      ON ap.id = a.applicant_id
@@ -701,9 +701,10 @@ class ApplicationController
     private static function _loadApp(PDO $pdo, int $id): ?array
     {
         $stmt = $pdo->prepare("
-            SELECT a.*, ap.village_id
+            SELECT a.*, ap.village_id, v.name as village_name, v.district as village_district
             FROM applications a
             JOIN applicants ap ON ap.id = a.applicant_id
+            JOIN villages v ON v.id = ap.village_id
             WHERE a.id = ?
         ");
         $stmt->execute([$id]);

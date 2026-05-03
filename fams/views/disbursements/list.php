@@ -166,7 +166,7 @@ window.onclick = function(event) {
           <td data-label="#"><?= $d['installment_no'] ?></td>
           <?php if (!$app): ?>
           <td data-label="Application"><a href="index.php?page=applications.view&id=<?= $d['app_id'] ?>">#<?= $d['app_id'] ?> — <?= e($d['applicant_name']) ?></a></td>
-          <td data-label="Village"><?= e($d['village_name']) ?></td>
+          <td data-label="Village"><?= e($d['village_name']) ?><br><span class="text-tiny muted"><?= e($d['village_district'] ?: '') ?></span></td>
           <?php endif; ?>
           <td data-label="Due"><?= $d['due_date'] ? fdate($d['due_date']) : '—' ?></td>
           <td data-label="Amount"><strong><?= money($d['amount']) ?></strong></td>

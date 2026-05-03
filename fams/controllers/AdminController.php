@@ -67,9 +67,12 @@ class AdminController
         $pagination = $result;
 
         // Load village assignments
-        $uvStmt = $pdo->query("SELECT uv.user_id, v.name FROM user_villages uv JOIN villages v ON v.id=uv.village_id");
+        $uvStmt = $pdo->query("SELECT uv.user_id, v.name, v.district FROM user_villages uv JOIN villages v ON v.id=uv.village_id");
         $uvMap  = [];
-        foreach ($uvStmt->fetchAll() as $row) { $uvMap[$row['user_id']][] = $row['name']; }
+        foreach ($uvStmt->fetchAll() as $row) { 
+            $thackiya = $row['district'] ? " (" . $row['district'] . ")" : "";
+            $uvMap[$row['user_id']][] = $row['name'] . $thackiya; 
+        }
 
         $pageTitle = 'User Management'; $activePage = 'admin.users';
         require __DIR__ . '/../views/admin/users.php';
