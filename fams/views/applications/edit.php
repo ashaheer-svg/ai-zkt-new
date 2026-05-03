@@ -2,8 +2,8 @@
 <?php require __DIR__ . '/../layout/sidebar.php'; ?>
 <?php
 $isEdit = true;
-// Pre-fill $d from existing applicant record
-$d = array_merge((array)$applicant, (array)$app);
+$d = array_merge((array)($applicant??[]), (array)($app??[]), $_POST);
+$dependants = $dependants ?? [];
 ?>
 <?php require __DIR__ . '/_form.php'; ?>
 <?php require __DIR__ . '/../layout/footer.php'; ?>

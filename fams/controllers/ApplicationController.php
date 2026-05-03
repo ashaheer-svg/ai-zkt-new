@@ -145,6 +145,22 @@ class ApplicationController
             }
         }
 
+        // Rebuild dependants from POST for display on validation failure
+        $dependants = [];
+        if (!empty($_POST['dep_name'])) {
+            foreach ($_POST['dep_name'] as $i => $name) {
+                if (trim($name) === '') continue;
+                $dependants[] = [
+                    'full_name' => $name,
+                    'age' => $_POST['dep_age'][$i] ?? null,
+                    'gender' => $_POST['dep_gender'][$i] ?? '',
+                    'relationship' => $_POST['dep_rel'][$i] === 'other' ? ($_POST['dep_rel_other'][$i] ?? 'other') : ($_POST['dep_rel'][$i] ?? 'other'),
+                    'occupation' => $_POST['dep_occ'][$i] ?? '',
+                    'income' => (float)($_POST['dep_inc'][$i] ?? 0)
+                ];
+            }
+        }
+
         $pageTitle  = 'New Project';
         $activePage = 'applications';
         require __DIR__ . '/../views/applications/create.php';
@@ -236,7 +252,26 @@ class ApplicationController
             }
         }
 
-        $pageTitle = 'Edit Project #' . $id; $activePage = 'applications';
+        // Rebuild dependants from POST if validation failed, else use DB
+        if ($_SERVER['REQUEST_METHOD'] === 'POST' && $errors) {
+            $dependants = [];
+            if (!empty($_POST['dep_name'])) {
+                foreach ($_POST['dep_name'] as $i => $name) {
+                    if (trim($name) === '') continue;
+                    $dependants[] = [
+                        'full_name' => $name,
+                        'age' => $_POST['dep_age'][$i] ?? null,
+                        'gender' => $_POST['dep_gender'][$i] ?? '',
+                        'relationship' => $_POST['dep_rel'][$i] === 'other' ? ($_POST['dep_rel_other'][$i] ?? 'other') : ($_POST['dep_rel'][$i] ?? 'other'),
+                        'occupation' => $_POST['dep_occ'][$i] ?? '',
+                        'income' => (float)($_POST['dep_inc'][$i] ?? 0)
+                    ];
+                }
+            }
+        }
+
+        $pageTitle = 'Edit Project #' . $id;
+        $activePage = 'applications';
         require __DIR__ . '/../views/applications/edit.php';
     }
 
