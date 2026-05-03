@@ -79,10 +79,25 @@ class DashboardController
         // ── 1.b Specific Data ────────────────────────────────────────────────
         $myBalance = 0;
         $myInstructions = [];
+        $myVillageAuthorized = 0;
         if ($auth->role() === ROLE_VILLAGE_INCHARGE) {
             $stmtBal = $pdo->prepare("SELECT balance FROM users WHERE id=?");
             $stmtBal->execute([$auth->id()]);
             $myBalance = (float)$stmtBal->fetchColumn();
+
+            $myVillages = $auth->myVillages();
+            if ($myVillages) {
+                $ph = implode(',', array_fill(0, count($myVillages), '?'));
+                $stmtAuth = $pdo->prepare("
+                    SELECT COALESCE(SUM(d.amount),0) 
+                    FROM disbursements d
+                    JOIN applications a ON a.id = d.application_id
+                    JOIN applicants ap ON ap.id = a.applicant_id
+                    WHERE d.status = 'authorized' AND ap.village_id IN ($ph)
+                ");
+                $stmtAuth->execute($myVillages);
+                $myVillageAuthorized = (float)$stmtAuth->fetchColumn();
+            }
 
             $stmtInst = $pdo->prepare("
                 SELECT d.*, ap.full_name as applicant_name, v.name as village_name

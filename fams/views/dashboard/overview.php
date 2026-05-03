@@ -3,15 +3,28 @@
 
 <!-- 1.b Specific Section -->
 <?php if ($auth->role() === ROLE_VILLAGE_INCHARGE): ?>
-<div class="card mb-2" style="background: linear-gradient(135deg, var(--surface), var(--card)); border-left: 5px solid var(--primary);">
-    <div class="d-flex align-center" style="justify-content: space-between;">
-        <div>
-            <div class="stat-label">My Available Balance</div>
-            <div class="stat-value" style="font-size: 2rem; color: var(--primary);"><?= money($myBalance) ?></div>
-            <div class="stat-sub">Funds allocated for village distribution</div>
-        </div>
-        <div style="font-size: 3rem; opacity: 0.2;">💰</div>
-    </div>
+<div class="card-grid mb-2">
+  <div class="card" style="background: linear-gradient(135deg, var(--surface), var(--card)); border-left: 5px solid var(--primary);">
+      <div class="d-flex align-center" style="justify-content: space-between;">
+          <div>
+              <div class="stat-label">My Available Balance</div>
+              <div class="stat-value" style="font-size: 1.8rem; color: var(--primary);"><?= money($myBalance) ?></div>
+              <div class="stat-sub">Funds allocated to me</div>
+          </div>
+          <div style="font-size: 2.5rem; opacity: 0.2;">💰</div>
+      </div>
+  </div>
+
+  <div class="card" style="background: linear-gradient(135deg, var(--surface), var(--card)); border-left: 5px solid var(--orange);">
+      <div class="d-flex align-center" style="justify-content: space-between;">
+          <div>
+              <div class="stat-label">Authorized (Waiting to be paid)</div>
+              <div class="stat-value" style="font-size: 1.8rem; color: var(--orange);"><?= money($myVillageAuthorized) ?></div>
+              <div class="stat-sub">Total pending in my villages</div>
+          </div>
+          <div style="font-size: 2.5rem; opacity: 0.2;">📤</div>
+      </div>
+  </div>
 </div>
 
 <div class="card mb-2">
