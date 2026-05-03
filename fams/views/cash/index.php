@@ -9,10 +9,10 @@
                 <thead>
                     <tr>
                         <th>Village In-Charge</th>
-                        <th>Cash in Hand (Balance)</th>
-                        <th>Awaiting Payments (Authorized)</th>
-                        <th>Approved for Disbursement (Scheduled)</th>
-                        <th>Net Requirement</th>
+                        <th>Cash in Hand<br><small class="text-muted">(Balance)</small></th>
+                        <th>Awaiting Payments<br><small class="text-muted">(Authorized)</small></th>
+                        <th>Approved<br><small class="text-muted">(Scheduled)</small></th>
+                        <th>Net Req.</th>
                     </tr>
                 </thead>
                 <tbody>

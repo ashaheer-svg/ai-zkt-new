@@ -242,7 +242,8 @@ thead th {
   text-transform:uppercase; letter-spacing:.06em;
   padding:.75rem 1rem; text-align:left;
   border-bottom:1px solid var(--border);
-  white-space:nowrap;
+  white-space:normal;
+  line-height:1.2;
 }
 tbody tr {
   border-bottom:1px solid var(--border);
