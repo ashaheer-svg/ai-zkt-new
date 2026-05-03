@@ -219,6 +219,9 @@ $isEdit = $isEdit ?? false;
     <button type="submit" class="btn btn-primary">
       <?= $isEdit ? '💾 Save Changes' : '📤 Submit Application' ?>
     </button>
+    <button type="submit" name="save_draft" value="1" class="btn btn-outline" formnovalidate>
+      📂 Save as Draft
+    </button>
     <a href="index.php?page=applications" class="btn btn-outline">Cancel</a>
   </div>
 </form>

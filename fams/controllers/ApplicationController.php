@@ -76,16 +76,31 @@ class ApplicationController
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             csrf_verify();
             $d = $_POST;
+            $isDraft = isset($d['save_draft']);
 
             // Validate
             if (empty($d['full_name']))       $errors[] = 'Full name is required.';
-            if (empty($d['village_id']))       $errors[] = 'Village is required.';
-            if (empty($d['fund_category_id'])) $errors[] = 'Fund category is required.';
-            if (empty($d['amount_requested'])) $errors[] = 'Amount requested is required.';
-            if (empty($d['gender']))           $errors[] = 'Gender is required.';
+            if (empty($d['village_id']))      $errors[] = 'Village is required.';
+            
+            if (!$isDraft) {
+                if (empty($d['fund_category_id'])) $errors[] = 'Fund category is required.';
+                if (empty($d['amount_requested'])) $errors[] = 'Amount requested is required.';
+                if (empty($d['gender']))           $errors[] = 'Gender is required.';
+            }
 
             if (!$errors) {
                 $pdo->beginTransaction();
+                
+                // For drafts, ensure NOT NULL columns have values
+                if ($isDraft) {
+                    if (empty($d['fund_category_id'])) {
+                        // Use first available category as a placeholder
+                        $d['fund_category_id'] = $pdo->query("SELECT id FROM fund_categories WHERE is_active=1 LIMIT 1")->fetchColumn() ?: 0;
+                    }
+                    if (empty($d['amount_requested'])) {
+                        $d['amount_requested'] = 0;
+                    }
+                }
                 // Insert applicant
                 $stmt = $pdo->prepare("INSERT INTO applicants
                     (full_name,address,gender,age,id_number,telephone,telephone_home,village_id,marital_status,residency_status,occupation,employer_details,notes)
@@ -113,9 +128,14 @@ class ApplicationController
                 }
 
                 // Determine status
-                $isHigherRole = $auth->hasRole([ROLE_VILLAGE_INCHARGE, ROLE_OVERALL_INCHARGE, ROLE_SYSADMIN]);
-                $status  = $isHigherRole ? STATUS_SUBMITTED  : STATUS_PENDING_VALIDATION;
-                $isValid = $isHigherRole ? 1 : 0;
+                if ($isDraft) {
+                    $status = STATUS_DRAFT;
+                    $isValid = 0;
+                } else {
+                    $isHigherRole = $auth->hasRole([ROLE_VILLAGE_INCHARGE, ROLE_OVERALL_INCHARGE, ROLE_SYSADMIN]);
+                    $status  = $isHigherRole ? STATUS_SUBMITTED  : STATUS_PENDING_VALIDATION;
+                    $isValid = $isHigherRole ? 1 : 0;
+                }
 
                 $stmt = $pdo->prepare("INSERT INTO applications
                     (applicant_id,fund_category_id,amount_requested,status,is_valid,created_by,
@@ -187,11 +207,43 @@ class ApplicationController
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             csrf_verify();
             $d = $_POST;
+            $isDraft = isset($d['save_draft']);
+
             if (empty($d['full_name']))   $errors[] = 'Full name required.';
-            if (empty($d['amount_requested'])) $errors[] = 'Amount required.';
+            // Village is usually hidden/disabled in edit, but let's be safe
+            if (empty($d['village_id']))  $errors[] = 'Village is required.';
+            
+            if (!$isDraft) {
+                if (empty($d['amount_requested'])) $errors[] = 'Amount required.';
+                if (empty($d['fund_category_id'])) $errors[] = 'Category required.';
+            }
 
             if (!$errors) {
                 $pdo->beginTransaction();
+                
+                // For drafts, ensure NOT NULL columns have values
+                if ($isDraft) {
+                    if (empty($d['fund_category_id'])) {
+                        $d['fund_category_id'] = $pdo->query("SELECT id FROM fund_categories WHERE is_active=1 LIMIT 1")->fetchColumn() ?: 0;
+                    }
+                    if (empty($d['amount_requested'])) {
+                        $d['amount_requested'] = 0;
+                    }
+                }
+                
+                // Determine new status
+                $status  = $app['status'];
+                $isValid = (int)$app['is_valid'];
+
+                if ($isDraft) {
+                    $status = STATUS_DRAFT;
+                    $isValid = 0;
+                } elseif ($status === STATUS_DRAFT) {
+                    // Promoting from draft to real application
+                    $isHigherRole = $auth->hasRole([ROLE_VILLAGE_INCHARGE, ROLE_OVERALL_INCHARGE, ROLE_SYSADMIN]);
+                    $status  = $isHigherRole ? STATUS_SUBMITTED  : STATUS_PENDING_VALIDATION;
+                    $isValid = $isHigherRole ? 1 : 0;
+                }
                 $fields = [
                     'full_name','address','gender','age','id_number','telephone','telephone_home',
                     'marital_status','residency_status','occupation','employer_details','notes'
@@ -219,11 +271,11 @@ class ApplicationController
                     ]);
                 
                 $pdo->prepare("UPDATE applications SET 
-                    fund_category_id=?, amount_requested=?, requested_type=?, requested_installment=?, requested_count=?, 
+                    fund_category_id=?, amount_requested=?, status=?, is_valid=?, requested_type=?, requested_installment=?, requested_count=?, 
                     reason_for_application=?, applied_other_funds=?, expected_date=?, updated_at=CURRENT_TIMESTAMP 
                     WHERE id=?")
                     ->execute([
-                        $d['fund_category_id'],$d['amount_requested'],$d['requested_type']??null,$d['requested_installment']??null,$d['requested_count']??null,
+                        $d['fund_category_id'],$d['amount_requested'],$status,$isValid,$d['requested_type']??null,$d['requested_installment']??null,$d['requested_count']??null,
                         $d['reason_for_application']??'',$d['applied_other_funds']??'',$d['expected_date']?:null,$id
                     ]);
 
