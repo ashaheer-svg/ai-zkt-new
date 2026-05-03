@@ -50,7 +50,7 @@ define('STATUS_BADGE', [
     STATUS_REJECTED           => 'badge-red',
     STATUS_DISBURSING         => 'badge-orange',
     STATUS_COMPLETED          => 'badge-teal',
-    STATUS_ON_HOLD            => 'badge-red',
+    STATUS_ON_HOLD            => 'badge-yellow',
 ]);
 
 // ── Disbursement Types ────────────────────────────────────────────────────────

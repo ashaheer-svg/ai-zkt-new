@@ -632,6 +632,72 @@ class ApplicationController
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
+    // ── Adjust Schedule (1.c) ────────────────────────────────────────────────
+    public static function adjustSchedule(PDO $pdo, Auth $auth, Logger $logger): void
+    {
+        $auth->requireRole([ROLE_OVERALL_INCHARGE, ROLE_SYSADMIN]);
+        csrf_verify();
+        $id  = (int)($_POST['id'] ?? 0);
+        $app = self::_loadApp($pdo, $id);
+        if (!$app || $app['status'] !== STATUS_DISBURSING) {
+            flash('error', 'Only active (disbursing) projects can be re-scheduled.');
+            redirect('index.php?page=applications.view&id='.$id);
+        }
+
+        $comment = trim($_POST['comment'] ?? '');
+        if (!$comment) {
+            flash('error', 'Reason for adjustment is required.');
+            redirect('index.php?page=applications.view&id='.$id);
+        }
+
+        $type    = $_POST['disbursement_type'] ?? $app['disbursement_type'];
+        $amount  = (float)($_POST['disbursement_amount'] ?? 0);
+        $count   = (int)($_POST['disbursement_count'] ?? 1);
+        $start   = $_POST['disbursement_start_date'] ?? date('Y-m-d');
+
+        if ($amount <= 0 || $count <= 0) {
+            flash('error', 'Invalid adjustment guidelines.');
+            redirect('index.php?page=applications.view&id='.$id);
+        }
+
+        $pdo->beginTransaction();
+
+        // 1. Identify what's already released (don't touch these)
+        $stmtReleased = $pdo->prepare("SELECT COUNT(*) FROM disbursements WHERE application_id=? AND status='released'");
+        $stmtReleased->execute([$id]);
+        $releasedCount = (int)$stmtReleased->fetchColumn();
+
+        // 2. Delete PENDING, AUTHORIZED and CANCELLED installments (future/non-paid)
+        $pdo->prepare("DELETE FROM disbursements WHERE application_id=? AND status IN ('pending', 'authorized', 'cancelled')")->execute([$id]);
+
+        // 3. Update application record
+        $pdo->prepare("UPDATE applications SET disbursement_type=?, disbursement_amount=?, disbursement_count=?, updated_at=CURRENT_TIMESTAMP WHERE id=?")
+            ->execute([$type, $amount, $releasedCount + $count, $id]);
+
+        // 4. Insert new installments starting from the provided date
+        $stmt = $pdo->prepare("INSERT INTO disbursements (application_id,installment_no,due_date,amount) VALUES (?,?,?,?)");
+        $dt   = new DateTime($start);
+        for ($i = 1; $i <= $count; $i++) {
+            $instNo = $releasedCount + $i;
+            $stmt->execute([$id, $instNo, $dt->format('Y-m-d'), $amount]);
+            if ($type === DISB_ONE_TIME) break;
+            match ($type) {
+                DISB_WEEKLY       => $dt->modify('+1 week'),
+                DISB_MONTHLY      => $dt->modify('+1 month'),
+                DISB_QUARTERLY    => $dt->modify('+3 months'),
+                DISB_HALF_YEARLY  => $dt->modify('+6 months'),
+                DISB_YEARLY       => $dt->modify('+1 year'),
+            };
+        }
+
+        $logger->appLog($id, $auth->id(), 'schedule_adjusted', $comment . " | New Guideline: $type, $amount x $count (remaining) starting $start");
+        $logger->activity($auth->id(), 'adjust_application_schedule', 'application', $id);
+        $pdo->commit();
+
+        flash('success', 'Disbursement schedule has been adjusted. ' . $releasedCount . ' past payments were preserved.');
+        redirect('index.php?page=applications.view&id='.$id);
+    }
+
     private static function _loadApp(PDO $pdo, int $id): ?array
     {
         $stmt = $pdo->prepare("

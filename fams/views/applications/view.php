@@ -47,6 +47,9 @@
   <?php elseif ($app['is_valid']): ?>
   <button onclick="document.getElementById('holdPanel').style.display='block'" class="btn btn-warning">⏸️ Put On Hold</button>
   <?php endif; ?>
+  <?php if ($app['status'] === STATUS_DISBURSING): ?>
+  <button onclick="document.getElementById('adjustPanel').style.display='block'" class="btn btn-warning">⚙️ Adjust Schedule</button>
+  <?php endif; ?>
   <?php endif; ?>
 
   <?php 
@@ -132,6 +135,47 @@
     <div class="btn-group">
       <button type="submit" class="btn btn-success">✅ Approve & Schedule</button>
       <button type="button" onclick="document.getElementById('approvePanel').style.display='none'" class="btn btn-outline">Cancel</button>
+    </div>
+  </form>
+</div>
+
+<!-- Adjustment Panel for 1.c (Rescheduling) -->
+<div id="adjustPanel" style="display:none" class="panel mb-2 border-warning">
+  <div class="panel-title">⚙️ Adjust Disbursement Schedule</div>
+  <p class="text-small text-muted mb-1">Adjusting the schedule will only affect <strong>future (Pending/Authorized)</strong> payments. Payments already marked as 'Released' will remain unchanged.</p>
+  <form method="POST" action="index.php?page=applications.adjust">
+    <?= csrf_field() ?>
+    <input type="hidden" name="id" value="<?= $app['id'] ?>">
+    <div class="form-grid mb-1">
+      <div class="form-group">
+        <label>New Disbursement Type</label>
+        <select name="disbursement_type" required>
+          <?php foreach (DISB_LABELS as $v => $l): ?>
+          <option value="<?= $v ?>" <?= ($app['disbursement_type']??'')==$v ? 'selected' : '' ?>><?= $l ?></option>
+          <?php endforeach; ?>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>New Amount Per Installment</label>
+        <input type="number" step="0.01" name="disbursement_amount" value="<?= e($app['disbursement_amount']) ?>" required>
+      </div>
+      <div class="form-group">
+        <label>New Remaining No. of Installments</label>
+        <input type="number" name="disbursement_count" value="1" required min="1">
+        <span class="text-tiny muted">This will add X new installments.</span>
+      </div>
+      <div class="form-group">
+        <label>Next Payment Date</label>
+        <input type="date" name="disbursement_start_date" value="<?= date('Y-m-d') ?>" required>
+      </div>
+    </div>
+    <div class="form-group mb-1">
+      <label>Reason for Adjustment (required for logs)</label>
+      <textarea name="comment" required placeholder="e.g. Applicant requested change, or partial payment already made elsewhere…"></textarea>
+    </div>
+    <div class="btn-group">
+      <button type="submit" class="btn btn-warning">⚙️ Update Schedule</button>
+      <button type="button" onclick="document.getElementById('adjustPanel').style.display='none'" class="btn btn-outline">Cancel</button>
     </div>
   </form>
 </div>

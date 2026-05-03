@@ -80,6 +80,7 @@ match (true) {
     $page === 'applications.comment'   => ApplicationController::comment($pdo, $auth, $logger),
     $page === 'applications.review'    => ApplicationController::review($pdo, $auth, $logger),
     $page === 'applications.approve'   => ApplicationController::approve($pdo, $auth, $logger),
+    $page === 'applications.adjust'    => ApplicationController::adjustSchedule($pdo, $auth, $logger),
     $page === 'applications.reject'    => ApplicationController::reject($pdo, $auth, $logger),
     $page === 'applications.revert'    => ApplicationController::revert($pdo, $auth, $logger),
     $page === 'applications.hold'      => ApplicationController::hold($pdo, $auth, $logger),
