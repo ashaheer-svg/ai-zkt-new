@@ -154,23 +154,29 @@
       <div class="detail-item"><div class="detail-label">Gender</div><div class="detail-value"><?= ucfirst(e($applicant['gender'])) ?></div></div>
       <div class="detail-item"><div class="detail-label">Age</div><div class="detail-value"><?= $applicant['age'] ?: '—' ?></div></div>
       <div class="detail-item"><div class="detail-label">ID / NIC</div><div class="detail-value"><?= e($applicant['id_number'] ?: '—') ?></div></div>
-      <div class="detail-item"><div class="detail-label">Telephone</div><div class="detail-value"><?= e($applicant['telephone'] ?: '—') ?></div></div>
+      <div class="detail-item"><div class="detail-label">Mobile Phone</div><div class="detail-value"><?= e($applicant['telephone'] ?: '—') ?></div></div>
+      <div class="detail-item"><div class="detail-label">Home Phone</div><div class="detail-value"><?= e($applicant['telephone_home'] ?: '—') ?></div></div>
       <div class="detail-item"><div class="detail-label">Marital Status</div><div class="detail-value"><?= ucfirst(e($applicant['marital_status'] ?: '—')) ?></div></div>
-      <div class="detail-item"><div class="detail-label">Address</div><div class="detail-value"><?= e($applicant['address'] ?: '—') ?></div></div>
-      <?php if ($applicant['notes']): ?><div class="detail-item" style="grid-column:1/-1"><div class="detail-label">Notes</div><div class="detail-value"><?= e($applicant['notes']) ?></div></div><?php endif; ?>
+      <div class="detail-item"><div class="detail-label">Residency</div><div class="detail-value"><?= ucfirst(e($applicant['residency_status'] ?: '—')) ?></div></div>
+      <div class="detail-item"><div class="detail-label">Occupation</div><div class="detail-value"><?= e($applicant['occupation'] ?: '—') ?></div></div>
+      <div class="detail-item"><div class="detail-label">Employer Details</div><div class="detail-value"><?= e($applicant['employer_details'] ?: '—') ?></div></div>
+      <div class="detail-item full"><div class="detail-label">Address</div><div class="detail-value"><?= e($applicant['address'] ?: '—') ?></div></div>
+      <?php if ($applicant['notes']): ?><div class="detail-item full"><div class="detail-label">Internal Notes</div><div class="detail-value"><?= e($applicant['notes']) ?></div></div><?php endif; ?>
     </div>
   </div>
 
   <?php if ($dependants): ?>
   <div class="card mb-2">
     <div class="card-title">👥 Dependants (<?= count($dependants) ?>)</div>
-    <div class="table-wrap"><table><thead><tr><th>Name</th><th>Relationship</th><th>Age</th><th>Gender</th></tr></thead><tbody>
+    <div class="table-wrap"><table class="table-card"><thead><tr><th>Name</th><th>Relationship</th><th>Age</th><th>Gender</th><th>Occupation</th><th>Income</th></tr></thead><tbody>
       <?php foreach ($dependants as $c): ?>
       <tr>
-        <td><?= e($c['full_name']) ?></td>
-        <td><span class="badge badge-outline"><?= ucfirst(e($c['relationship']?:'—')) ?></span></td>
-        <td><?= $c['age']?:'—' ?></td>
-        <td><?= ucfirst($c['gender']?:'—') ?></td>
+        <td data-label="Name"><?= e($c['full_name']) ?></td>
+        <td data-label="Relationship"><span class="badge badge-outline"><?= ucfirst(e($c['relationship']?:'—')) ?></span></td>
+        <td data-label="Age"><?= $c['age']?:'—' ?></td>
+        <td data-label="Gender"><?= ucfirst($c['gender']?:'—') ?></td>
+        <td data-label="Occupation"><?= e($c['occupation']?:'—') ?></td>
+        <td data-label="Income"><?= $c['income'] > 0 ? money($c['income']) : '—' ?></td>
       </tr>
       <?php endforeach; ?>
     </tbody></table></div>
@@ -185,8 +191,12 @@
       <div class="detail-item"><div class="detail-label">Installment Amount</div><div class="detail-value"><?= money($app['requested_installment'] ?? $app['amount_requested']) ?></div></div>
       <div class="detail-item"><div class="detail-label">Quantity</div><div class="detail-value"><?= $app['requested_count'] ?? 1 ?></div></div>
       <div class="detail-item"><div class="detail-label">Total Amount Requested</div><div class="detail-value"><strong><?= money($app['amount_requested']) ?></strong></div></div>
+      <div class="detail-item"><div class="detail-label">Other Fund Applications</div><div class="detail-value"><?= ucfirst(e($app['applied_other_funds'] ?: 'no')) ?></div></div>
+      <div class="detail-item"><div class="detail-label">Expected Date</div><div class="detail-value"><?= fdate($app['expected_date']) ?></div></div>
+      <div class="detail-item full"><div class="detail-label">Reason for Application</div><div class="detail-value" style="white-space:pre-wrap"><?= e($app['reason_for_application'] ?: '—') ?></div></div>
+      
       <?php if ($app['disbursement_type']): ?>
-      <div class="detail-item"><div class="detail-label">Disbursement Type</div><div class="detail-value"><?= DISB_LABELS[$app['disbursement_type']] ?? $app['disbursement_type'] ?></div></div>
+      <div class="detail-item"><div class="detail-label">Approved Type</div><div class="detail-value"><?= DISB_LABELS[$app['disbursement_type']] ?? $app['disbursement_type'] ?></div></div>
       <div class="detail-item"><div class="detail-label">Per Installment</div><div class="detail-value"><?= money($app['disbursement_amount']) ?></div></div>
       <div class="detail-item"><div class="detail-label">Installments</div><div class="detail-value"><?= $app['disbursement_count'] ?></div></div>
       <div class="detail-item"><div class="detail-label">Start Date</div><div class="detail-value"><?= fdate($app['disbursement_start_date']) ?></div></div>

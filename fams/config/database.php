@@ -101,6 +101,44 @@ function _migrate(PDO $pdo): void
     if (!in_array('paid_by', $colsD)) {
         $pdo->exec("ALTER TABLE disbursements ADD COLUMN paid_by INTEGER");
     }
+
+    // --- 2026 Form Expansion ---
+    
+    // applicants table
+    $colsA = $pdo->query("PRAGMA table_info(applicants)")->fetchAll(PDO::FETCH_COLUMN, 1);
+    if (!in_array('telephone_home', $colsA)) {
+        $pdo->exec("ALTER TABLE applicants ADD COLUMN telephone_home TEXT");
+    }
+    if (!in_array('residency_status', $colsA)) {
+        $pdo->exec("ALTER TABLE applicants ADD COLUMN residency_status TEXT");
+    }
+    if (!in_array('occupation', $colsA)) {
+        $pdo->exec("ALTER TABLE applicants ADD COLUMN occupation TEXT");
+    }
+    if (!in_array('employer_details', $colsA)) {
+        $pdo->exec("ALTER TABLE applicants ADD COLUMN employer_details TEXT");
+    }
+
+    // applications table
+    $colsApp = $pdo->query("PRAGMA table_info(applications)")->fetchAll(PDO::FETCH_COLUMN, 1);
+    if (!in_array('reason_for_application', $colsApp)) {
+        $pdo->exec("ALTER TABLE applications ADD COLUMN reason_for_application TEXT");
+    }
+    if (!in_array('applied_other_funds', $colsApp)) {
+        $pdo->exec("ALTER TABLE applications ADD COLUMN applied_other_funds TEXT");
+    }
+    if (!in_array('expected_date', $colsApp)) {
+        $pdo->exec("ALTER TABLE applications ADD COLUMN expected_date DATE");
+    }
+
+    // applicant_dependants table
+    $colsDep = $pdo->query("PRAGMA table_info(applicant_dependants)")->fetchAll(PDO::FETCH_COLUMN, 1);
+    if (!in_array('occupation', $colsDep)) {
+        $pdo->exec("ALTER TABLE applicant_dependants ADD COLUMN occupation TEXT");
+    }
+    if (!in_array('income', $colsDep)) {
+        $pdo->exec("ALTER TABLE applicant_dependants ADD COLUMN income REAL DEFAULT 0");
+    }
 }
 
 function _createSchema(PDO $pdo): void

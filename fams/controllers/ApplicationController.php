@@ -88,23 +88,27 @@ class ApplicationController
                 $pdo->beginTransaction();
                 // Insert applicant
                 $stmt = $pdo->prepare("INSERT INTO applicants
-                    (full_name,address,gender,age,id_number,telephone,village_id,marital_status,notes)
-                    VALUES (?,?,?,?,?,?,?,?,?)");
+                    (full_name,address,gender,age,id_number,telephone,telephone_home,village_id,marital_status,residency_status,occupation,employer_details,notes)
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)");
                 $stmt->execute([
                     $d['full_name'], $d['address'] ?? '', $d['gender'],
-                    $d['age'] ?: null, $d['id_number'] ?? '', $d['telephone'] ?? '',
-                    $d['village_id'], $d['marital_status'] ?? null, $d['notes'] ?? ''
+                    $d['age'] ?: null, $d['id_number'] ?? '', $d['telephone'] ?? '', $d['telephone_home'] ?? '',
+                    $d['village_id'], $d['marital_status'] ?? null, $d['residency_status'] ?? null,
+                    $d['occupation'] ?? '', $d['employer_details'] ?? '', $d['notes'] ?? ''
                 ]);
                 $applicantId = (int)$pdo->lastInsertId();
 
                 // Dependants (includes spouses/siblings/etc)
                 if (!empty($d['dep_name'])) {
-                    $stmt = $pdo->prepare("INSERT INTO applicant_dependants (applicant_id,full_name,age,gender,relationship) VALUES (?,?,?,?,?)");
+                    $stmt = $pdo->prepare("INSERT INTO applicant_dependants (applicant_id,full_name,age,gender,relationship,occupation,income) VALUES (?,?,?,?,?,?,?)");
                     foreach ($d['dep_name'] as $i => $dn) {
                         if (trim($dn) === '') continue;
                         $rel = $d['dep_rel'][$i] ?? 'other';
                         if ($rel === 'other' && !empty($d['dep_rel_other'][$i])) $rel = $d['dep_rel_other'][$i];
-                        $stmt->execute([$applicantId, $dn, $d['dep_age'][$i] ?: null, $d['dep_gender'][$i] ?? '', $rel]);
+                        $stmt->execute([
+                            $applicantId, $dn, $d['dep_age'][$i] ?: null, $d['dep_gender'][$i] ?? '', $rel,
+                            $d['dep_occ'][$i] ?? '', (float)($d['dep_inc'][$i] ?? 0)
+                        ]);
                     }
                 }
 
@@ -115,11 +119,13 @@ class ApplicationController
 
                 $stmt = $pdo->prepare("INSERT INTO applications
                     (applicant_id,fund_category_id,amount_requested,status,is_valid,created_by,
-                     requested_type,requested_installment,requested_count)
-                    VALUES (?,?,?,?,?,?,?,?,?)");
+                     requested_type,requested_installment,requested_count,
+                     reason_for_application,applied_other_funds,expected_date)
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?)");
                 $stmt->execute([
                     $applicantId, $d['fund_category_id'], $d['amount_requested'], $status, $isValid, $auth->id(),
-                    $d['requested_type'] ?? null, $d['requested_installment'] ?? null, $d['requested_count'] ?? null
+                    $d['requested_type'] ?? null, $d['requested_installment'] ?? null, $d['requested_count'] ?? null,
+                    $d['reason_for_application'] ?? '', $d['applied_other_funds'] ?? '', $d['expected_date'] ?: null
                 ]);
                 $appId = (int)$pdo->lastInsertId();
 
@@ -170,30 +176,53 @@ class ApplicationController
 
             if (!$errors) {
                 $pdo->beginTransaction();
-                $fields = ['full_name','address','gender','age','id_number','telephone','marital_status','notes'];
+                $fields = [
+                    'full_name','address','gender','age','id_number','telephone','telephone_home',
+                    'marital_status','residency_status','occupation','employer_details','notes'
+                ];
                 foreach ($fields as $f) {
                     if (($applicant[$f] ?? '') !== ($d[$f] ?? '')) {
                         $logger->editLog($id, $auth->id(), $f, $applicant[$f]??'', $d[$f] ?? '');
                     }
                 }
-                if (($app['amount_requested']) != ($d['amount_requested'])) {
-                    $logger->editLog($id, $auth->id(), 'amount_requested', $app['amount_requested'], $d['amount_requested']);
-                }
-                $pdo->prepare("UPDATE applicants SET full_name=?,address=?,gender=?,age=?,id_number=?,telephone=?,marital_status=?,notes=? WHERE id=?")
-                    ->execute([$d['full_name'],$d['address']??'',$d['gender'],$d['age']?:null,$d['id_number']??'',$d['telephone']??'',$d['marital_status']??null,$d['notes']??'',$app['applicant_id']]);
                 
-                $pdo->prepare("UPDATE applications SET fund_category_id=?,amount_requested=?,requested_type=?,requested_installment=?,requested_count=?,updated_at=CURRENT_TIMESTAMP WHERE id=?")
-                    ->execute([$d['fund_category_id'],$d['amount_requested'],$d['requested_type']??null,$d['requested_installment']??null,$d['requested_count']??null,$id]);
+                $appFields = ['fund_category_id','amount_requested','requested_type','requested_installment','requested_count','reason_for_application','applied_other_funds','expected_date'];
+                foreach ($appFields as $f) {
+                    if (($app[$f] ?? '') != ($d[$f] ?? '')) {
+                        $logger->editLog($id, $auth->id(), $f, $app[$f]??'', $d[$f] ?? '');
+                    }
+                }
+
+                $pdo->prepare("UPDATE applicants SET 
+                    full_name=?, address=?, gender=?, age=?, id_number=?, telephone=?, telephone_home=?, 
+                    marital_status=?, residency_status=?, occupation=?, employer_details=?, notes=? 
+                    WHERE id=?")
+                    ->execute([
+                        $d['full_name'],$d['address']??'',$d['gender'],$d['age']?:null,$d['id_number']??'',$d['telephone']??'',$d['telephone_home']??'',
+                        $d['marital_status']??null,$d['residency_status']??null,$d['occupation']??'',$d['employer_details']??'',$d['notes']??'',$app['applicant_id']
+                    ]);
+                
+                $pdo->prepare("UPDATE applications SET 
+                    fund_category_id=?, amount_requested=?, requested_type=?, requested_installment=?, requested_count=?, 
+                    reason_for_application=?, applied_other_funds=?, expected_date=?, updated_at=CURRENT_TIMESTAMP 
+                    WHERE id=?")
+                    ->execute([
+                        $d['fund_category_id'],$d['amount_requested'],$d['requested_type']??null,$d['requested_installment']??null,$d['requested_count']??null,
+                        $d['reason_for_application']??'',$d['applied_other_funds']??'',$d['expected_date']?:null,$id
+                    ]);
 
                 // Dependants
                 $pdo->prepare("DELETE FROM applicant_dependants WHERE applicant_id=?")->execute([$app['applicant_id']]);
                 if (!empty($d['dep_name'])) {
-                    $stmt = $pdo->prepare("INSERT INTO applicant_dependants (applicant_id,full_name,age,gender,relationship) VALUES (?,?,?,?,?)");
+                    $stmt = $pdo->prepare("INSERT INTO applicant_dependants (applicant_id,full_name,age,gender,relationship,occupation,income) VALUES (?,?,?,?,?,?,?)");
                     foreach ($d['dep_name'] as $i => $dn) {
                         if (trim($dn)==='') continue;
                         $rel = $d['dep_rel'][$i] ?? 'other';
                         if ($rel === 'other' && !empty($d['dep_rel_other'][$i])) $rel = $d['dep_rel_other'][$i];
-                        $stmt->execute([$app['applicant_id'],$dn,$d['dep_age'][$i]?:null,$d['dep_gender'][$i]??'',$rel]);
+                        $stmt->execute([
+                            $app['applicant_id'],$dn,$d['dep_age'][$i]?:null,$d['dep_gender'][$i]??'',$rel,
+                            $d['dep_occ'][$i] ?? '', (float)($d['dep_inc'][$i] ?? 0)
+                        ]);
                     }
                 }
                 if (!empty($_FILES['documents']['name'][0])) {

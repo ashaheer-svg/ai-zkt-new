@@ -54,10 +54,31 @@ $isEdit = $isEdit ?? false;
         <select name="marital_status">
           <option value="">Select…</option>
           <option value="married"   <?= ($d['marital_status']??'')==='married'   ?'selected':'' ?>>Married</option>
+          <option value="single"    <?= ($d['marital_status']??'')==='single'    ?'selected':'' ?>>Single</option>
           <option value="divorced"  <?= ($d['marital_status']??'')==='divorced'  ?'selected':'' ?>>Divorced</option>
           <option value="widowed"   <?= ($d['marital_status']??'')==='widowed'   ?'selected':'' ?>>Widowed</option>
-          <option value="unmarried" <?= ($d['marital_status']??'')==='unmarried' ?'selected':'' ?>>Unmarried</option>
         </select>
+      </div>
+      <div class="form-group">
+        <label>Home Telephone</label>
+        <input type="tel" name="telephone_home" value="<?= e($d['telephone_home'] ?? '') ?>" placeholder="+xxx xxx xxxx">
+      </div>
+      <div class="form-group">
+        <label>Residency Status</label>
+        <select name="residency_status">
+          <option value="">Select…</option>
+          <option value="own"    <?= ($d['residency_status']??'')==='own'    ?'selected':'' ?>>Own House</option>
+          <option value="rented" <?= ($d['residency_status']??'')==='rented' ?'selected':'' ?>>Rented House</option>
+          <option value="other"  <?= ($d['residency_status']??'')==='other'  ?'selected':'' ?>>Other</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Occupation</label>
+        <input type="text" name="occupation" value="<?= e($d['occupation'] ?? '') ?>" placeholder="Applicant's job">
+      </div>
+      <div class="form-group full">
+        <label>Employer & Contact Details</label>
+        <input type="text" name="employer_details" value="<?= e($d['employer_details'] ?? '') ?>" placeholder="Name and contact of employer">
       </div>
       <div class="form-group full">
         <label>Address</label>
@@ -106,6 +127,14 @@ $isEdit = $isEdit ?? false;
             <option value="female" <?= ($c['gender']??'')==='female' ?'selected':'' ?>>Female</option>
           </select>
         </div>
+        <div class="form-group">
+          <label>Occupation</label>
+          <input type="text" name="dep_occ[]" value="<?= e($c['occupation']??'') ?>" placeholder="Job">
+        </div>
+        <div class="form-group">
+          <label>Income</label>
+          <input type="number" name="dep_inc[]" value="<?= e($c['income']??'') ?>" step="0.01" min="0" placeholder="0.00">
+        </div>
         <button type="button" class="btn btn-danger btn-sm remove-dep" style="position:absolute;top:0.5rem;right:0.5rem">×</button>
       </div>
       <?php endforeach; ?>
@@ -150,8 +179,23 @@ $isEdit = $isEdit ?? false;
                value="<?= e($d['amount_requested'] ?? $app['amount_requested'] ?? '') ?>" style="background:var(--bg-dim); font-weight:bold">
       </div>
       <div class="form-group full">
-        <label>Notes</label>
-        <textarea name="notes" placeholder="Additional notes or context…"><?= e($d['notes'] ?? $applicant['notes'] ?? '') ?></textarea>
+        <label>Reason for application to Nabaviyyah Charitable Trust *</label>
+        <textarea name="reason_for_application" required placeholder="Provide a detailed justification…"><?= e($d['reason_for_application'] ?? $app['reason_for_application'] ?? '') ?></textarea>
+      </div>
+      <div class="form-group">
+        <label>Applied to other Zakath Funds? *</label>
+        <select name="applied_other_funds" required>
+            <option value="no"  <?= ($d['applied_other_funds']??'')==='no'  ?'selected':'' ?>>No</option>
+            <option value="yes" <?= ($d['applied_other_funds']??'')==='yes' ?'selected':'' ?>>Yes</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Expected Date of Funds</label>
+        <input type="date" name="expected_date" value="<?= e($d['expected_date'] ?? $app['expected_date'] ?? '') ?>">
+      </div>
+      <div class="form-group full">
+        <label>Internal Office Notes</label>
+        <textarea name="notes" placeholder="Additional internal context…"><?= e($d['notes'] ?? $applicant['notes'] ?? '') ?></textarea>
       </div>
     </div>
   </div>

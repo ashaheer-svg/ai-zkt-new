@@ -76,6 +76,14 @@
             <option value="female">Female</option>
           </select>
         </div>
+        <div class="form-group">
+          <label>Occupation</label>
+          <input type="text" name="dep_occ[]" placeholder="Job">
+        </div>
+        <div class="form-group">
+          <label>Income</label>
+          <input type="number" name="dep_inc[]" step="0.01" min="0" placeholder="0.00">
+        </div>
         <button type="button" class="btn btn-danger btn-sm remove-dep" style="position:absolute;top:0.5rem;right:0.5rem">×</button>
       `;
       container.appendChild(row);
