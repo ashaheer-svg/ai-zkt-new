@@ -22,7 +22,10 @@
                         <tr>
                             <td data-label="User">
                                 <strong><?= e($u['full_name']) ?></strong>
-                                <div class="text-muted" style="font-size: 0.8rem;">@<?= e($u['username']) ?></div>
+                                <div class="text-muted" style="font-size: 0.75rem;">
+                                    <span class="badge badge-gray"><?= e(role_label($u['role'])) ?></span>
+                                    @<?= e($u['username']) ?>
+                                </div>
                             </td>
                             <td data-label="Cash in Hand" style="font-weight: 600; color: var(--primary);">
                                 <?= money($u['balance']) ?>

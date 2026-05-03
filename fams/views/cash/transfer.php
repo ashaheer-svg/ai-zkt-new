@@ -6,16 +6,16 @@
             <?= csrf_field() ?>
 
             <div class="form-group mb-2">
-                <label for="to_user_id">Select Village In-Charge (1.b)</label>
+                <label for="to_user_id">Select Recipient (1.b or 1.c)</label>
                 <select name="to_user_id" id="to_user_id" required>
-                    <option value="">-- Select User --</option>
-                    <?php foreach ($villageIncharges as $u): ?>
+                    <option value="">-- Select Recipient --</option>
+                    <?php foreach ($recipients as $u): ?>
                         <option value="<?= $u['id'] ?>">
-                            <?= e($u['full_name']) ?> (<?= e($u['username']) ?>) — Current Bal: <?= money($u['balance']) ?>
+                            [<?= e(role_label($u['role'])) ?>] <?= e($u['full_name']) ?> (@<?= e($u['username']) ?>) — Bal: <?= money($u['balance']) ?>
                         </option>
                     <?php endforeach; ?>
                 </select>
-                <p class="form-hint">Only active 1.b level users are listed.</p>
+                <p class="form-hint">Both 1.b and 1.c level users can receive funds.</p>
             </div>
 
             <div class="form-group mb-2">

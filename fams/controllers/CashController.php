@@ -23,16 +23,17 @@ class CashController
                 u.id, 
                 u.full_name, 
                 u.username, 
+                u.role,
                 u.balance,
                 COALESCE(SUM(CASE WHEN d.status = 'authorized' THEN d.amount ELSE 0 END), 0) as authorized_amount,
                 COALESCE(SUM(CASE WHEN d.status = 'pending' THEN d.amount ELSE 0 END), 0) as pending_amount
             FROM users u
             LEFT JOIN disbursements d ON d.assigned_to = u.id
-            WHERE u.role = ? AND u.is_active = 1
+            WHERE u.role IN (?, ?) AND u.is_active = 1
             GROUP BY u.id
-            ORDER BY u.full_name
+            ORDER BY u.role DESC, u.full_name
         ");
-        $stmtSummary->execute([ROLE_VILLAGE_INCHARGE]);
+        $stmtSummary->execute([ROLE_VILLAGE_INCHARGE, ROLE_OVERALL_INCHARGE]);
         $userSummary = $stmtSummary->fetchAll();
 
         $pageTitle = 'Cash Transfer Management';
@@ -60,8 +61,8 @@ class CashController
             $stmt->execute([$toUserId]);
             $toUser = $stmt->fetch();
 
-            if (!$toUser || $toUser['role'] !== ROLE_VILLAGE_INCHARGE) {
-                flash('error', 'Transfers can only be made to Village In-Charge (1.b) users.');
+            if (!$toUser || !in_array($toUser['role'], [ROLE_VILLAGE_INCHARGE, ROLE_OVERALL_INCHARGE])) {
+                flash('error', 'Transfers can only be made to 1.b or 1.c users.');
                 redirect('index.php?page=cash.transfer');
             }
 
@@ -87,12 +88,12 @@ class CashController
             }
         }
 
-        // Fetch all 1.b users
-        $stmt = $pdo->prepare("SELECT id, full_name, username, balance FROM users WHERE role = ? AND is_active = 1 ORDER BY full_name");
-        $stmt->execute([ROLE_VILLAGE_INCHARGE]);
-        $villageIncharges = $stmt->fetchAll();
+        // Fetch all 1.b and 1.c users
+        $stmt = $pdo->prepare("SELECT id, full_name, username, role, balance FROM users WHERE role IN (?, ?) AND is_active = 1 ORDER BY role DESC, full_name");
+        $stmt->execute([ROLE_VILLAGE_INCHARGE, ROLE_OVERALL_INCHARGE]);
+        $recipients = $stmt->fetchAll();
 
-        $pageTitle = 'Transfer Funds to Village In-Charge';
+        $pageTitle = 'Transfer Funds';
         $activePage = 'cash.transfers';
         require __DIR__ . '/../views/cash/transfer.php';
     }
