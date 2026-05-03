@@ -5,17 +5,42 @@ class CashController
     {
         $auth->requireRole([ROLE_OVERALL_INCHARGE, ROLE_SYSADMIN]);
 
+        $where = [];
+        $params = [];
+        
+        if (!empty($_GET['from'])) {
+            $where[] = "ct.from_user_id = ?";
+            $params[] = $_GET['from'];
+        }
+        if (!empty($_GET['to'])) {
+            $where[] = "ct.to_user_id = ?";
+            $params[] = $_GET['to'];
+        }
+        if (!empty($_GET['date'])) {
+            $where[] = "DATE(ct.created_at) = ?";
+            $params[] = $_GET['date'];
+        }
+
         $sql = "SELECT ct.*, f.full_name as from_name, t.full_name as to_name 
                 FROM cash_transfers ct 
                 JOIN users f ON f.id = ct.from_user_id
-                JOIN users t ON t.id = ct.to_user_id
-                ORDER BY ct.created_at DESC";
+                JOIN users t ON t.id = ct.to_user_id";
+        
+        if ($where) {
+            $sql .= " WHERE " . implode(" AND ", $where);
+        }
+        
+        $sql .= " ORDER BY ct.created_at DESC";
         
         $page = max(1, (int)($_GET['p'] ?? 1));
-        $result = paginate($pdo, $sql, [], $page);
+        $result = paginate($pdo, $sql, $params, $page);
         
         $transfers = $result['rows'];
         $pagination = $result;
+
+        // Fetch unique senders and receivers for filters
+        $senders = $pdo->query("SELECT DISTINCT u.id, u.full_name FROM users u JOIN cash_transfers ct ON u.id = ct.from_user_id ORDER BY u.full_name")->fetchAll();
+        $receivers = $pdo->query("SELECT DISTINCT u.id, u.full_name FROM users u JOIN cash_transfers ct ON u.id = ct.to_user_id ORDER BY u.full_name")->fetchAll();
 
         // Fetch 1.b User Summary
         $stmtSummary = $pdo->prepare("

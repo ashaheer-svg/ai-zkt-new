@@ -3,7 +3,7 @@
 
 <div style="max-width: 1400px; margin: 0 auto;">
     <div class="card mb-3">
-        <div class="card-title">🏘️ Village In-Charge (1.b) Financial Summary</div>
+        <div class="card-title">🏘️ Cash Holding & Financial Summary (1.b & 1.c)</div>
         <div class="table-wrap">
             <table class="table-card">
                 <thead>
@@ -50,11 +50,48 @@
         </div>
     </div>
 
-    <div class="d-flex justify-between align-center mb-2">
-        <h2 style="font-size: 1.1rem; margin: 0;">📜 Transfer History</h2>
-        <a href="index.php?page=cash.transfer" class="btn btn-primary">
-            <i class="fas fa-plus"></i> New Transfer
+    <div class="divider"></div>
+
+    <div class="d-flex justify-between align-center mb-2 mt-3" style="flex-wrap: wrap; gap: 1rem;">
+        <h2 style="font-size: 1.25rem; font-weight: 800; color: var(--text); margin: 0;">📜 Transfer History</h2>
+        <a href="index.php?page=cash.transfer" class="btn btn-primary" style="padding: 0.75rem 1.5rem; box-shadow: 0 4px 12px var(--primary-glow);">
+            <i class="fas fa-plus"></i> New Fund Transfer
         </a>
+    </div>
+
+    <!-- Filters -->
+    <div class="card mb-2" style="padding: 1rem;">
+        <form method="GET" action="index.php" class="filter-row-compact">
+            <input type="hidden" name="page" value="cash.transfers">
+            <div class="filter-group">
+                <label>Date</label>
+                <input type="date" name="date" value="<?= e($_GET['date'] ?? '') ?>" style="max-width: 160px;">
+            </div>
+            <div class="filter-group">
+                <label>From</label>
+                <select name="from">
+                    <option value="">All Senders</option>
+                    <?php foreach ($senders as $s): ?>
+                        <option value="<?= $s['id'] ?>" <?= ($_GET['from']??'') == $s['id'] ? 'selected' : '' ?>><?= e($s['full_name']) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>To</label>
+                <select name="to">
+                    <option value="">All Recipients</option>
+                    <?php foreach ($receivers as $r): ?>
+                        <option value="<?= $r['id'] ?>" <?= ($_GET['to']??'') == $r['id'] ? 'selected' : '' ?>><?= e($r['full_name']) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="filter-actions">
+                <button type="submit" class="btn btn-outline">🔍 Filter</button>
+                <?php if (!empty($_GET['date']) || !empty($_GET['from']) || !empty($_GET['to'])): ?>
+                    <a href="index.php?page=cash.transfers" class="btn btn-outline" title="Clear Filters">✕</a>
+                <?php endif; ?>
+            </div>
+        </form>
     </div>
 
     <div class="card">
