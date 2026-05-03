@@ -141,13 +141,35 @@
 
 <!-- Reset Modal -->
 <div id="resetModal" class="modal-overlay" style="display:none">
-  <div class="modal-content" style="max-width: 400px;">
-    <div class="modal-header"><h3 class="text-danger">Factory Reset</h3><button onclick="document.getElementById('resetModal').style.display='none'" class="close-btn">&times;</button></div>
+  <div class="modal-content" style="max-width: 450px;">
+    <div class="modal-header">
+      <h3 class="text-danger">🔥 Critical: Factory Reset</h3>
+      <button onclick="document.getElementById('resetModal').style.display='none'" class="close-btn">&times;</button>
+    </div>
     <form method="POST" action="index.php?page=admin.reset" class="modal-body">
       <?= csrf_field() ?>
-      <p class="text-small mb-2">This will wipe all records. Type <strong>RESET</strong> to confirm:</p>
-      <input type="text" name="confirm_reset" placeholder="RESET" required class="form-control mb-2" autocomplete="off">
-      <div class="btn-group"><button type="submit" class="btn btn-danger">Reset</button><button type="button" onclick="document.getElementById('resetModal').style.display='none'" class="btn btn-outline">Cancel</button></div>
+      <div class="alert alert-danger mb-2">
+        <strong>⚠️ This action is irreversible!</strong>
+        <p class="text-small mt-1">The following data will be permanently deleted:</p>
+        <ul class="text-tiny mt-1" style="list-style: disc; padding-left: 1.5rem;">
+          <li>All <strong>Applicants</strong> and their Personal Details</li>
+          <li>All <strong>Applications</strong> and their Status History</li>
+          <li>All <strong>Disbursements</strong> and Payment Records</li>
+          <li>All <strong>Documents</strong> and Uploaded Files</li>
+          <li>All <strong>Village Scoping</strong> and Assignments</li>
+          <li>All <strong>Activity Logs</strong> and System Audit Trails</li>
+          <li>All <strong>Mobile API Tokens</strong></li>
+        </ul>
+        <p class="text-small mt-1"><em>Settings and your SysAdmin account will be preserved.</em></p>
+      </div>
+      
+      <p class="text-small mb-1">To confirm this catastrophic action, please type <strong>RESET</strong> in the box below:</p>
+      <input type="text" name="confirm_reset" placeholder="Type RESET to confirm" required class="form-control mb-2" autocomplete="off" style="border-color: var(--danger);">
+      
+      <div class="btn-group">
+        <button type="submit" class="btn btn-danger w-100">I Understand - Wipe Everything</button>
+        <button type="button" onclick="document.getElementById('resetModal').style.display='none'" class="btn btn-outline w-100">Cancel</button>
+      </div>
     </form>
   </div>
 </div>
