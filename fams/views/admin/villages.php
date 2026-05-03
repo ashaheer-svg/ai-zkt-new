@@ -11,7 +11,7 @@ if ($action==='edit' && isset($_GET['id'])) { $s=$pdo->prepare("SELECT * FROM vi
     <?php if ($editItem): ?><input type="hidden" name="id" value="<?= $editItem['id'] ?>"><?php endif; ?>
     <div class="form-grid">
       <div class="form-group"><label>Village Name *</label><input type="text" name="name" value="<?= e($editItem['name']??'') ?>" required></div>
-      <div class="form-group"><label>District</label><input type="text" name="district" value="<?= e($editItem['district']??'') ?>" placeholder="District / Region"></div>
+      <div class="form-group"><label>Thackiya</label><input type="text" name="district" value="<?= e($editItem['district']??'') ?>" placeholder="Thackiya Name"></div>
       <div class="form-group"><label>Allocation Amount *</label><input type="number" step="0.01" name="allocation_amount" value="<?= e($editItem['allocation_amount']??'0.00') ?>" required placeholder="Project Limit"></div>
     </div>
     <div class="btn-group mt-2">
@@ -22,12 +22,12 @@ if ($action==='edit' && isset($_GET['id'])) { $s=$pdo->prepare("SELECT * FROM vi
 </div>
 
 <div class="card" style="padding:0"><div class="table-wrap"><table class="table-card">
-  <thead><tr><th>Village</th><th>District</th><th>Allocation</th><th>Projects</th><th>Status</th><th>Actions</th></tr></thead>
+  <thead><tr><th>Village</th><th>Thackiya</th><th>Allocation</th><th>Projects</th><th>Status</th><th>Actions</th></tr></thead>
   <tbody>
     <?php foreach ($villages as $v): ?>
     <tr>
       <td data-label="Village"><strong><?= e($v['name']) ?></strong></td>
-      <td data-label="District" class="muted"><?= e($v['district']?:'—') ?></td>
+      <td data-label="Thackiya" class="muted"><?= e($v['district']?:'—') ?></td>
       <td data-label="Allocation"><?= money((float)$v['allocation_amount']) ?></td>
       <td data-label="Projects"><?= $v['applicant_count'] ?></td>
       <td data-label="Status"><?= $v['is_active']?'<span class="badge badge-green">Active</span>':'<span class="badge badge-red">Inactive</span>' ?></td>
