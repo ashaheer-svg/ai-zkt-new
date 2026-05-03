@@ -18,6 +18,11 @@ if (in_array($role,[ROLE_DATA_ENTRY,ROLE_VILLAGE_INCHARGE,ROLE_OVERALL_INCHARGE,
     $nav[] = ['page'=>'applications.pending','icon'=>'🔍','label'=>'Pending Validation'];
 }
 
+// Pending Release (for 1.b)
+if ($role === ROLE_VILLAGE_INCHARGE) {
+    $nav[] = ['page'=>'disbursements.pending_release', 'icon'=>'📤', 'label'=>'Pending Payments'];
+}
+
 // Disbursements & Allocations
 if (in_array($role,[ROLE_OVERALL_INCHARGE,ROLE_SYSADMIN])) {
     $nav[] = ['page'=>'disbursements',     'icon'=>'🏦','label'=>'Disbursements'];

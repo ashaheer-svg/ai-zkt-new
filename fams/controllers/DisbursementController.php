@@ -81,12 +81,31 @@ class DisbursementController
                                    WHERE d.application_id=? ORDER BY d.installment_no");
             $stmt->execute([$appId]); $disbursements = $stmt->fetchAll();
         } else {
-            // Global view (1.c / sysadmin)
-            $auth->requireRole([ROLE_OVERALL_INCHARGE, ROLE_SYSADMIN]);
+            // Global view
+            $auth->requireRole([ROLE_OVERALL_INCHARGE, ROLE_SYSADMIN, ROLE_VILLAGE_INCHARGE]);
             $app = null;
             
             $where = ["1=1"];
             $params = [];
+
+            // Role-based scoping for 1.b
+            if ($auth->role() === ROLE_VILLAGE_INCHARGE) {
+                $myVillages = $auth->myVillages();
+                if ($myVillages) {
+                    $ph = implode(',', array_fill(0, count($myVillages), '?'));
+                    $where[] = "ap.village_id IN ($ph)";
+                    $params = array_merge($params, $myVillages);
+                } else {
+                    $where[] = "0=1";
+                }
+            }
+
+            // Status filter
+            $status = $_GET['status'] ?? '';
+            if ($status) {
+                $where[] = "d.status = ?";
+                $params[] = $status;
+            }
 
             // Village filter
             $villageId = (int)($_GET['village_id'] ?? 0);
@@ -156,9 +175,15 @@ class DisbursementController
             $stats = $stmt->fetch();
         }
 
-        $pageTitle = $appId ? 'Disbursements — App #'.$appId : 'All Disbursements';
-        $activePage = 'disbursements';
+        $pageTitle = $appId ? 'Disbursements — App #'.$appId : ($_GET['status'] === DISB_AUTHORIZED ? 'Pending Payments' : 'All Disbursements');
+        $activePage = ($_GET['status'] === DISB_AUTHORIZED && $role === ROLE_VILLAGE_INCHARGE) ? 'disbursements.pending_release' : 'disbursements';
         require __DIR__ . '/../views/disbursements/list.php';
+    }
+
+    public static function pendingRelease(PDO $pdo, Auth $auth, Logger $logger): void
+    {
+        $_GET['status'] = DISB_AUTHORIZED;
+        self::list($pdo, $auth, $logger);
     }
 
     // ── Authorize installment (1.c) ───────────────────────────────────────────

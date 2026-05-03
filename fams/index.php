@@ -99,8 +99,9 @@ match (true) {
     $page === 'applications.deldoc'    => ApplicationController::deleteDoc($pdo, $auth, $logger),
 
     // Disbursements
-    $page === 'disbursements'           => DisbursementController::list($pdo, $auth, $logger),
-    $page === 'disbursements.schedule'  => DisbursementController::schedule($pdo, $auth, $logger),
+    $page === 'disbursements'                 => DisbursementController::list($pdo, $auth, $logger),
+    $page === 'disbursements.pending_release' => DisbursementController::pendingRelease($pdo, $auth, $logger),
+    $page === 'disbursements.schedule'        => DisbursementController::schedule($pdo, $auth, $logger),
     $page === 'disbursements.authorize'      => DisbursementController::authorize($pdo, $auth, $logger),
     $page === 'disbursements.bulk_authorize' => DisbursementController::bulkAuthorize($pdo, $auth, $logger),
     $page === 'disbursements.release'        => DisbursementController::release($pdo, $auth, $logger),
