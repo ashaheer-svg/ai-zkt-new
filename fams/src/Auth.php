@@ -28,6 +28,35 @@ class Auth
         return true;
     }
 
+    public function loginByToken(string $token): bool
+    {
+        $stmt = $this->pdo->prepare("
+            SELECT u.*, t.expires_at 
+            FROM users u
+            JOIN api_tokens t ON t.user_id = u.id
+            WHERE t.token = ? AND u.is_active = 1
+        ");
+        $stmt->execute([$token]);
+        $user = $stmt->fetch();
+
+        if (!$user) return false;
+
+        // Check expiry
+        if (strtotime($user['expires_at']) < time()) return false;
+
+        // Populate session-like data for consistency with hasRole() etc
+        $_SESSION['user_id']   = $user['id'];
+        $_SESSION['user_role'] = $user['role'];
+        $_SESSION['user_name'] = $user['full_name'];
+        $_SESSION['user_obj']  = $user;
+
+        // Update last used
+        $this->pdo->prepare("UPDATE api_tokens SET last_used_at = CURRENT_TIMESTAMP WHERE token = ?")
+                  ->execute([$token]);
+
+        return true;
+    }
+
     public function logout(): void
     {
         session_destroy();
@@ -74,8 +103,11 @@ class Auth
 
     public function isInVillage(int $villageId): bool
     {
+        if ($this->hasRole([ROLE_OVERALL_INCHARGE, ROLE_SYSADMIN])) {
+            return true; // unrestricted
+        }
         $villages = $this->myVillages();
-        if (empty($villages)) return true; // unrestricted
+        if (empty($villages)) return false; // default-closed: No assignments = No access
         return in_array($villageId, $villages, true);
     }
 
@@ -86,11 +118,7 @@ class Auth
         if ($app['is_privileged'] && !$this->hasRole([ROLE_OVERALL_INCHARGE, ROLE_SYSADMIN])) {
             return false;
         }
-        // Global roles
-        if ($this->hasRole([ROLE_OVERALL_INCHARGE, ROLE_SYSADMIN])) {
-            return true;
-        }
-        // Village-scoped roles — check village assignment
+        // Check village-scoped access (handles global roles internally)
         return $this->isInVillage((int)$app['village_id']);
     }
 

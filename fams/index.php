@@ -1,13 +1,11 @@
 <?php
 declare(strict_types=1);
-error_reporting(E_ALL);
-ini_set('display_errors', '1');
 
 $sessPath = __DIR__ . '/sessions';
 if (!is_dir($sessPath)) mkdir($sessPath, 0755, true);
 session_save_path($sessPath);
 session_start();
-define('APP_DEPLOY_VERSION', 'v1.0.2-DEBUG');
+define('APP_DEPLOY_VERSION', 'v1.0.3-SECURE');
 
 if (empty($_SESSION['session_test'])) {
     $_SESSION['session_test'] = time();
@@ -26,8 +24,19 @@ require_once __DIR__ . '/controllers/ApplicationController.php';
 require_once __DIR__ . '/controllers/DisbursementController.php';
 require_once __DIR__ . '/controllers/AdminController.php';
 require_once __DIR__ . '/controllers/CashController.php';
+require_once __DIR__ . '/controllers/ApiController.php';
 
-$pdo    = getDB();
+$pdo = getDB();
+
+// ── Bootstrap Settings ────────────────────────────────────────────────────────
+$sysSettings = $pdo->query("SELECT * FROM settings")->fetchAll(PDO::FETCH_KEY_PAIR);
+$isDebug     = ($sysSettings['debug_mode'] ?? '0') === '1';
+$timezone    = $sysSettings['timezone'] ?? 'Asia/Colombo';
+
+error_reporting($isDebug ? E_ALL : 0);
+ini_set('display_errors', $isDebug ? '1' : '0');
+date_default_timezone_set($timezone);
+
 $auth   = new Auth($pdo);
 $logger = new Logger($pdo);
 
@@ -109,6 +118,13 @@ match (true) {
     $page === 'admin.settings'   => AdminController::settings($pdo, $auth, $logger),
     $page === 'admin.system'     => AdminController::system($pdo, $auth, $logger),
     $page === 'admin.db_backup'  => AdminController::db_backup($pdo, $auth, $logger),
+    $page === 'admin.full_backup' => AdminController::fullBackup($pdo, $auth, $logger),
+    $page === 'admin.reset'      => AdminController::resetDB($pdo, $auth, $logger),
+
+    // API (Mobile)
+    $page === 'api.projects'       => ApiController::projects($pdo, $auth),
+    $page === 'api.document-types' => ApiController::documentTypes($pdo, $auth),
+    $page === 'api.upload'         => ApiController::upload($pdo, $auth, $logger),
 
 
     // Fallback

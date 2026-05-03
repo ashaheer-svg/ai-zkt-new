@@ -199,7 +199,60 @@ class AdminController
     public static function settings(PDO $pdo, Auth $auth, Logger $logger): void
     {
         $auth->requireRole(ROLE_SYSADMIN);
-        $pageTitle = 'Settings'; $activePage = 'admin.settings';
+        $action = $_GET['sub_action'] ?? '';
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            csrf_verify();
+
+            if ($action === 'general') {
+                $stmt = $pdo->prepare("UPDATE settings SET value = ? WHERE key = ?");
+                $debugValue = isset($_POST['debug_mode']) ? '1' : '0';
+                $stmt->execute([$debugValue, 'debug_mode']);
+                if (!empty($_POST['timezone'])) {
+                    $stmt->execute([$_POST['timezone'], 'timezone']);
+                }
+                flash('success', 'General settings updated.');
+            }
+
+            if ($action === 'doc_type_add') {
+                $name = trim($_POST['name'] ?? '');
+                if ($name) {
+                    $pdo->prepare("INSERT OR IGNORE INTO document_types (name) VALUES (?)")->execute([$name]);
+                    flash('success', 'Document type added.');
+                }
+            }
+
+            if ($action === 'doc_type_toggle') {
+                $id = (int)$_POST['id'];
+                $pdo->prepare("UPDATE document_types SET is_active = CASE WHEN is_active=1 THEN 0 ELSE 1 END WHERE id=?")->execute([$id]);
+                flash('success', 'Document type status updated.');
+            }
+
+            if ($action === 'generate_token') {
+                $uid = (int)$_POST['user_id'];
+                $token = bin2hex(random_bytes(32));
+                $expires = date('Y-m-d H:i:s', strtotime('+365 days'));
+                
+                // Delete old tokens for this user to keep it simple (single device per user)
+                $pdo->prepare("DELETE FROM api_tokens WHERE user_id=?")->execute([$uid]);
+                $pdo->prepare("INSERT INTO api_tokens (user_id, token, expires_at) VALUES (?, ?, ?)")
+                    ->execute([$uid, $token, $expires]);
+                
+                flash('success', 'New API token generated for 365 days.');
+            }
+
+            redirect('index.php?page=admin.settings');
+        }
+
+        $settings = $pdo->query("SELECT * FROM settings")->fetchAll(PDO::FETCH_KEY_PAIR);
+        $timezones = DateTimeZone::listIdentifiers();
+        $docTypes = $pdo->query("SELECT * FROM document_types ORDER BY name")->fetchAll();
+        $users = $pdo->query("SELECT id, username, full_name, role FROM users WHERE is_active=1 ORDER BY full_name")->fetchAll();
+        
+        // Fetch current tokens for display
+        $tokens = $pdo->query("SELECT t.*, u.full_name FROM api_tokens t JOIN users u ON u.id = t.user_id")->fetchAll();
+
+        $pageTitle = 'System Settings'; $activePage = 'admin.settings';
         require __DIR__ . '/../views/admin/settings.php';
     }
 
@@ -229,6 +282,84 @@ class AdminController
 
         $pageTitle = 'Administration'; $activePage = 'admin.system';
         require __DIR__ . '/../views/admin/system.php';
+    }
+
+    public static function resetDB(PDO $pdo, Auth $auth, Logger $logger): void
+    {
+        $auth->requireRole(ROLE_SYSADMIN);
+        csrf_verify();
+
+        if (($_POST['confirm_reset'] ?? '') !== 'RESET') {
+            flash('error', 'Database reset failed. You must type RESET to confirm.');
+            redirect('index.php?page=admin.settings');
+        }
+
+        try {
+            dropAllTables($pdo);
+            // Re-initialize via getDB triggers or explicit calls
+            _createSchema($pdo);
+            _migrate($pdo);
+            _seedAdmin($pdo);
+
+            $logger->activity($auth->id(), 'reset_database', 'system', 0);
+            
+            // Logout current user as sessions might be invalid or user might be gone
+            session_destroy();
+            header('Location: index.php?page=login&reset=success');
+            exit;
+        } catch (Exception $e) {
+            flash('error', 'Error resetting database: ' . $e->getMessage());
+            redirect('index.php?page=admin.settings');
+        }
+    }
+
+    public static function fullBackup(PDO $pdo, Auth $auth, Logger $logger): void
+    {
+        $auth->requireRole(ROLE_SYSADMIN);
+        
+        $rootPath = realpath(__DIR__ . '/../');
+        $zipFile  = sys_get_temp_dir() . '/fams_full_backup_' . date('Y-m-d_His') . '.zip';
+
+        $zip = new ZipArchive();
+        if ($zip->open($zipFile, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== TRUE) {
+            flash('error', 'Could not create ZIP archive.');
+            redirect('index.php?page=admin.settings');
+        }
+
+        $files = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($rootPath),
+            RecursiveIteratorIterator::LEAVES_ONLY
+        );
+
+        foreach ($files as $name => $file) {
+            if (!$file->isDir()) {
+                $filePath = $file->getRealPath();
+                $relativePath = substr($filePath, strlen($rootPath) + 1);
+
+                // Exclusions
+                if (str_contains($relativePath, 'sessions' . DIRECTORY_SEPARATOR)) continue;
+                if (str_contains($relativePath, '.git' . DIRECTORY_SEPARATOR)) continue;
+                if (str_contains($relativePath, '.gemini' . DIRECTORY_SEPARATOR)) continue;
+                if (basename($filePath) === '.env') continue;
+
+                $zip->addFile($filePath, $relativePath);
+            }
+        }
+
+        $zip->close();
+
+        $logger->activity($auth->id(), 'full_system_backup', 'system', 0);
+
+        header('Content-Description: File Transfer');
+        header('Content-Type: application/zip');
+        header('Content-Disposition: attachment; filename="' . basename($zipFile) . '"');
+        header('Expires: 0');
+        header('Cache-Control: must-revalidate');
+        header('Pragma: public');
+        header('Content-Length: ' . filesize($zipFile));
+        readfile($zipFile);
+        unlink($zipFile);
+        exit;
     }
 
     public static function db_backup(PDO $pdo, Auth $auth, Logger $logger): void

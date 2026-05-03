@@ -271,16 +271,16 @@ class DisbursementController
             try {
                 // If 1.b is releasing, check and deduct balance
                 if (!$is1c) {
-                    $stmtBal = $pdo->prepare("SELECT balance FROM users WHERE id = ?");
-                    $stmtBal->execute([$auth->id()]);
-                    $balance = (float)$stmtBal->fetchColumn();
-
-                    if ($balance < $disb['amount']) {
-                        throw new Exception("Insufficient balance. Your current balance is " . money($balance));
+                    $stmtUpdate = $pdo->prepare("UPDATE users SET balance = balance - ? WHERE id = ? AND balance >= ?");
+                    $stmtUpdate->execute([$disb['amount'], $auth->id(), $disb['amount']]);
+                    
+                    if ($stmtUpdate->rowCount() === 0) {
+                        // Check why it failed (insufficient balance or invalid user)
+                        $stmtCheck = $pdo->prepare("SELECT balance FROM users WHERE id = ?");
+                        $stmtCheck->execute([$auth->id()]);
+                        $currentBalance = (float)$stmtCheck->fetchColumn();
+                        throw new Exception("Insufficient balance. Your current balance is " . money($currentBalance));
                     }
-
-                    $pdo->prepare("UPDATE users SET balance = balance - ? WHERE id = ?")
-                        ->execute([$disb['amount'], $auth->id()]);
                 }
 
                 // Update disbursement

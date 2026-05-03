@@ -28,6 +28,15 @@ function _migrate(PDO $pdo): void
         $pdo->exec("ALTER TABLE villages ADD COLUMN allocation_amount REAL DEFAULT 0");
     }
 
+    // Add doc columns to application_documents if missing
+    $colsDoc = $pdo->query("PRAGMA table_info(application_documents)")->fetchAll(PDO::FETCH_COLUMN, 1);
+    if (!in_array('doc_type', $colsDoc)) {
+        $pdo->exec("ALTER TABLE application_documents ADD COLUMN doc_type TEXT");
+    }
+    if (!in_array('doc_language', $colsDoc)) {
+        $pdo->exec("ALTER TABLE application_documents ADD COLUMN doc_language TEXT");
+    }
+
     // Rename applicant_children to applicant_dependants
     $tables = $pdo->query("SELECT name FROM sqlite_master WHERE type='table'")->fetchAll(PDO::FETCH_COLUMN);
     if (in_array('applicant_children', $tables) && !in_array('applicant_dependants', $tables)) {
@@ -254,9 +263,28 @@ function _createSchema(PDO $pdo): void
             mime_type         TEXT,
             file_size         INTEGER,
             description       TEXT,
+            doc_type          TEXT,
+            doc_language      TEXT,
             created_at        DATETIME DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (application_id) REFERENCES applications(id) ON DELETE CASCADE,
             FOREIGN KEY (uploaded_by)    REFERENCES users(id)
+        );
+
+        CREATE TABLE IF NOT EXISTS document_types (
+            id         INTEGER PRIMARY KEY AUTOINCREMENT,
+            name       TEXT NOT NULL UNIQUE,
+            is_active  INTEGER DEFAULT 1,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS api_tokens (
+            id           INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id      INTEGER NOT NULL,
+            token        TEXT UNIQUE NOT NULL,
+            expires_at   DATETIME NOT NULL,
+            last_used_at DATETIME,
+            created_at   DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
         );
 
         CREATE TABLE IF NOT EXISTS application_edits (
@@ -307,15 +335,54 @@ function _createSchema(PDO $pdo): void
             created_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (user_id) REFERENCES users(id)
         );
+        CREATE TABLE IF NOT EXISTS settings (
+            key   TEXT PRIMARY KEY,
+            value TEXT
+        );
     ");
+}
+
+function _seedSettings(PDO $pdo): void
+{
+    $defaults = [
+        'debug_mode' => '0',
+        'timezone'   => 'Asia/Colombo'
+    ];
+    $stmt = $pdo->prepare("INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)");
+    foreach ($defaults as $k => $v) {
+        $stmt->execute([$k, $v]);
+    }
 }
 
 function _seedAdmin(PDO $pdo): void
 {
+    _seedSettings($pdo);
     $count = (int)$pdo->query('SELECT COUNT(*) FROM users')->fetchColumn();
     if ($count === 0) {
         $hash = password_hash('admin123', PASSWORD_DEFAULT);
         $stmt = $pdo->prepare("INSERT INTO users (username, password_hash, full_name, role) VALUES (?, ?, ?, ?)");
         $stmt->execute(['admin', $hash, 'System Administrator', 'sysadmin']);
     }
+
+    // Seed default doc types
+    $countTypes = (int)$pdo->query('SELECT COUNT(*) FROM document_types')->fetchColumn();
+    if ($countTypes === 0) {
+        $types = ['Application Form', 'Photo', 'ID Copy', 'Address Proof', 'Other'];
+        $stmt = $pdo->prepare("INSERT INTO document_types (name) VALUES (?)");
+        foreach ($types as $t) { $stmt->execute([$t]); }
+    }
+}
+
+function dropAllTables(PDO $pdo): void
+{
+    $tables = [
+        'disbursements', 'application_logs', 'application_edits', 
+        'applications', 'applicants', 'user_villages', 'villages', 
+        'fund_categories', 'activity_log', 'settings', 'users'
+    ];
+    $pdo->exec('PRAGMA foreign_keys = OFF');
+    foreach ($tables as $table) {
+        $pdo->exec("DROP TABLE IF EXISTS $table");
+    }
+    $pdo->exec('PRAGMA foreign_keys = ON');
 }
