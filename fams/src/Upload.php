@@ -1,11 +1,26 @@
 <?php
+/**
+ * File Upload and Document Management Service
+ * 
+ * Handles multi-file uploads, security validation (MIME, size, extension),
+ * database registration, and document streaming for the system.
+ */
 class Upload
 {
+    /**
+     * @param PDO $pdo Database connection for document records
+     * @param int $userId ID of the user performing the upload
+     */
     public function __construct(private PDO $pdo, private int $userId) {}
 
     /**
-     * Store multiple uploaded files for an application.
-     * @return array ['stored'=>int, 'errors'=>string[]]
+     * Processes and stores multiple uploaded files for a specific application.
+     * Includes validation for size, extension, and actual MIME content.
+     * 
+     * @param array $filesInput The raw $_FILES array entry
+     * @param int $applicationId Associated application ID
+     * @param string $description Optional description for the batch of files
+     * @return array ['stored' => int, 'errors' => string[]]
      */
     public function storeMultiple(array $filesInput, int $applicationId, string $description = ''): array
     {
@@ -16,27 +31,32 @@ class Upload
             mkdir(UPLOAD_DIR, 0755, true);
         }
 
-        // Normalise $_FILES array for multi-upload
+        // Normalise $_FILES array for multi-upload handling
         $files = $this->normalise($filesInput);
 
         foreach ($files as $file) {
             if ($file['error'] === UPLOAD_ERR_NO_FILE) continue;
+            
+            // Basic error check
             if ($file['error'] !== UPLOAD_ERR_OK) {
                 $errors[] = 'Upload error on ' . e($file['name']) . ': error code ' . $file['error'];
                 continue;
             }
+
+            // Size check (defined in app.php)
             if ($file['size'] > UPLOAD_MAX_SIZE) {
                 $errors[] = e($file['name']) . ' exceeds the 10 MB limit.';
                 continue;
             }
 
+            // Extension check
             $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
             if (!in_array($ext, UPLOAD_ALLOWED_EXT, true)) {
                 $errors[] = e($file['name']) . ' — unsupported file type.';
                 continue;
             }
 
-            // MIME check via finfo
+            // MIME content check via finfo (prevents extension spoofing)
             $finfo    = new finfo(FILEINFO_MIME_TYPE);
             $mime     = $finfo->file($file['tmp_name']);
             if (!in_array($mime, UPLOAD_ALLOWED_MIME, true)) {
@@ -44,6 +64,7 @@ class Upload
                 continue;
             }
 
+            // Generate unique filename to prevent collisions and overwrites
             $storedName = uuid() . '.' . $ext;
             $dest       = UPLOAD_DIR . $storedName;
 
@@ -52,6 +73,7 @@ class Upload
                 continue;
             }
 
+            // Register in database
             $stmt = $this->pdo->prepare("
                 INSERT INTO application_documents
                     (application_id, uploaded_by, original_filename, stored_filename, mime_type, file_size, description)
@@ -72,6 +94,12 @@ class Upload
         return compact('stored', 'errors');
     }
 
+    /**
+     * Retrieves all document records associated with an application.
+     * 
+     * @param int $applicationId
+     * @return array
+     */
     public function getForApplication(int $applicationId): array
     {
         $stmt = $this->pdo->prepare("
@@ -85,6 +113,12 @@ class Upload
         return $stmt->fetchAll();
     }
 
+    /**
+     * Fetches metadata for a single document.
+     * 
+     * @param int $documentId
+     * @return array|null
+     */
     public function getById(int $documentId): ?array
     {
         $stmt = $this->pdo->prepare('SELECT * FROM application_documents WHERE id = ?');
@@ -92,6 +126,13 @@ class Upload
         return $stmt->fetch() ?: null;
     }
 
+    /**
+     * Streams a file directly to the browser with appropriate headers.
+     * Images are streamed 'inline', other types as 'attachment'.
+     * 
+     * @param int $documentId
+     * @throws Exception If file not found
+     */
     public function stream(int $documentId): never
     {
         $doc = $this->getById($documentId);
@@ -114,6 +155,12 @@ class Upload
         exit;
     }
 
+    /**
+     * Deletes a document from both filesystem and database.
+     * 
+     * @param int $documentId
+     * @return bool True if deleted successfully
+     */
     public function delete(int $documentId): bool
     {
         $doc = $this->getById($documentId);
@@ -127,12 +174,23 @@ class Upload
         return true;
     }
 
+    /**
+     * Checks if a MIME type represents an image.
+     * 
+     * @param string $mimeType
+     * @return bool
+     */
     public function isImage(string $mimeType): bool
     {
         return str_starts_with($mimeType, 'image/');
     }
 
-    // ── Normalise multi-file input ────────────────────────────────────────────
+    /**
+     * Helper to transform PHP's multi-file $_FILES array into a cleaner list.
+     * 
+     * @param array $input
+     * @return array
+     */
     private function normalise(array $input): array
     {
         $files = [];

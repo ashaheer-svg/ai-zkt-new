@@ -1,27 +1,45 @@
 <?php
+/**
+ * Application (Project) Controller
+ * 
+ * Manages the core lifecycle of Zakath applications, including data entry,
+ * validation (1.b), review (1.c), approval, and document management.
+ * Implements strict RBAC and geographic scoping for all actions.
+ */
 class ApplicationController
 {
-    // ── List ──────────────────────────────────────────────────────────────────
+    /**
+     * Lists applications based on user role and geographic permissions.
+     * Handles search, status filtering, and pagination.
+     * 
+     * @param PDO $pdo The database connection instance.
+     * @param Auth $auth The authentication service for RBAC and scoping.
+     * @param Logger $logger The activity logging service.
+     * @return void
+     */
     public static function list(PDO $pdo, Auth $auth, Logger $logger): void
     {
         $auth->requireLogin();
         $role     = $auth->role();
         $villages = $auth->myVillages();
+        // 1.c and Sysadmins can toggle viewing of Drafts/Pending-Validation items
         $showAll  = ($auth->hasRole([ROLE_OVERALL_INCHARGE, ROLE_SYSADMIN]) && isset($_GET['show_all']));
 
         $where  = ['1=1'];
         $params = [];
 
-        // Privileged: only 1.c / sysadmin
+        // Visibility restriction: Only high-level roles see "privileged" cases
         if (!$auth->hasRole([ROLE_OVERALL_INCHARGE, ROLE_SYSADMIN])) {
             $where[] = 'a.is_privileged = 0';
         }
 
-        // Status scope by role
+        // Scope data based on Role
         if ($role === ROLE_DATA_ENTRY) {
+            // Creators only see their own entries
             $where[] = "a.created_by = ?";
             $params[] = $auth->id();
         } elseif ($role === ROLE_VILLAGE_INCHARGE || $role === ROLE_VERIFICATION) {
+            // Village-level users only see items beyond initial entry phase
             $where[] = "a.status NOT IN ('draft','pending_validation')";
             if ($villages) {
                 $ph = implode(',', array_fill(0, count($villages), '?'));
@@ -29,19 +47,20 @@ class ApplicationController
                 $params  = array_merge($params, $villages);
             }
         } elseif ($auth->hasRole([ROLE_OVERALL_INCHARGE, ROLE_SYSADMIN])) {
+            // Overall management sees everything unless restricted by toggle
             if (!$showAll) {
                 $where[] = "a.status NOT IN ('draft','pending_validation')";
             }
         }
 
-        // Search
+        // Search logic (Name, ID, Phone)
         $search = trim($_GET['search'] ?? '');
         if ($search) {
             $where[]  = "(ap.full_name LIKE ? OR ap.id_number LIKE ? OR ap.telephone LIKE ?)";
             $params   = array_merge($params, ["%$search%", "%$search%", "%$search%"]);
         }
 
-        // Status filter
+        // Filter by Status
         $filterStatus = $_GET['status'] ?? '';
         if ($filterStatus) { $where[] = 'a.status = ?'; $params[] = $filterStatus; }
 
@@ -64,7 +83,15 @@ class ApplicationController
         require __DIR__ . '/../views/applications/list.php';
     }
 
-    // ── Create ────────────────────────────────────────────────────────────────
+    /**
+     * Handles the creation of new applications and initial applicant registration.
+     * Supports "Save as Draft" (partial data) and "Submit" (full validation).
+     * 
+     * @param PDO $pdo The database connection instance.
+     * @param Auth $auth The authentication service.
+     * @param Logger $logger The activity logging service.
+     * @return void
+     */
     public static function create(PDO $pdo, Auth $auth, Logger $logger): void
     {
         $auth->requireRole([ROLE_DATA_ENTRY, ROLE_VILLAGE_INCHARGE, ROLE_OVERALL_INCHARGE, ROLE_SYSADMIN]);
@@ -78,7 +105,7 @@ class ApplicationController
             $d = $_POST;
             $isDraft = isset($d['save_draft']);
 
-            // Validate
+            // Validation logic changes based on whether it's a Draft or a Final Submission
             if (empty($d['full_name']))       $errors[] = 'Full name is required.';
             if (empty($d['village_id']))      $errors[] = 'Village is required.';
             
@@ -91,17 +118,17 @@ class ApplicationController
             if (!$errors) {
                 $pdo->beginTransaction();
                 
-                // For drafts, ensure NOT NULL columns have values
+                // For drafts, fill mandatory DB columns with placeholders if missing
                 if ($isDraft) {
                     if (empty($d['fund_category_id'])) {
-                        // Use first available category as a placeholder
                         $d['fund_category_id'] = $pdo->query("SELECT id FROM fund_categories WHERE is_active=1 LIMIT 1")->fetchColumn() ?: 0;
                     }
                     if (empty($d['amount_requested'])) {
                         $d['amount_requested'] = 0;
                     }
                 }
-                // Insert applicant
+
+                // 1. Insert Applicant Profile
                 $stmt = $pdo->prepare("INSERT INTO applicants
                     (full_name,address,gender,age,id_number,telephone,telephone_home,village_id,marital_status,residency_status,occupation,employer_details,notes)
                     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)");
@@ -113,7 +140,7 @@ class ApplicationController
                 ]);
                 $applicantId = (int)$pdo->lastInsertId();
 
-                // Dependants (includes spouses/siblings/etc)
+                // 2. Insert Dependants (Spouses, children, siblings)
                 if (!empty($d['dep_name'])) {
                     $stmt = $pdo->prepare("INSERT INTO applicant_dependants (applicant_id,full_name,age,gender,relationship,occupation,income) VALUES (?,?,?,?,?,?,?)");
                     foreach ($d['dep_name'] as $i => $dn) {
@@ -127,16 +154,18 @@ class ApplicationController
                     }
                 }
 
-                // Determine status
+                // 3. Determine Initial Application Status
                 if ($isDraft) {
                     $status = STATUS_DRAFT;
                     $isValid = 0;
                 } else {
                     $isHigherRole = $auth->hasRole([ROLE_VILLAGE_INCHARGE, ROLE_OVERALL_INCHARGE, ROLE_SYSADMIN]);
+                    // 1.a submissions require 1.b validation. Higher roles auto-validate their own entries.
                     $status  = $isHigherRole ? STATUS_SUBMITTED  : STATUS_PENDING_VALIDATION;
                     $isValid = $isHigherRole ? 1 : 0;
                 }
 
+                // 4. Create Application record
                 $stmt = $pdo->prepare("INSERT INTO applications
                     (applicant_id,fund_category_id,amount_requested,status,is_valid,created_by,
                      requested_type,requested_installment,requested_count,
@@ -149,7 +178,7 @@ class ApplicationController
                 ]);
                 $appId = (int)$pdo->lastInsertId();
 
-                // Documents
+                // 5. Handle initial document uploads
                 if (!empty($_FILES['documents']['name'][0])) {
                     $upload = new Upload($pdo, $auth->id());
                     $result = $upload->storeMultiple($_FILES['documents'], $appId, $d['doc_description'] ?? '');
@@ -165,7 +194,7 @@ class ApplicationController
             }
         }
 
-        // Rebuild dependants from POST for display on validation failure
+        // Rebuild dependants list from POST data if validation failed (prevents re-typing)
         $dependants = [];
         if (!empty($_POST['dep_name'])) {
             foreach ($_POST['dep_name'] as $i => $name) {
@@ -186,7 +215,15 @@ class ApplicationController
         require __DIR__ . '/../views/applications/create.php';
     }
 
-    // ── Edit ──────────────────────────────────────────────────────────────────
+    /**
+     * Updates an existing application or applicant profile.
+     * Maintains a detailed audit trail of all field-level changes.
+     * 
+     * @param PDO $pdo The database connection instance.
+     * @param Auth $auth The authentication service.
+     * @param Logger $logger The activity logging service.
+     * @return void
+     */
     public static function edit(PDO $pdo, Auth $auth, Logger $logger): void
     {
         $auth->requireLogin();
@@ -196,7 +233,7 @@ class ApplicationController
             flash('error', 'Not found or not editable.'); redirect('index.php?page=applications');
         }
 
-        $applicant  = $pdo->prepare("SELECT * FROM applicants WHERE id=?")->execute([$app['applicant_id']]) ? null : null;
+        // Load existing related data
         $stmt       = $pdo->prepare("SELECT * FROM applicants WHERE id=?"); $stmt->execute([$app['applicant_id']]); $applicant = $stmt->fetch();
         $stmtS      = $pdo->prepare("SELECT * FROM applicant_spouse WHERE applicant_id=?"); $stmtS->execute([$app['applicant_id']]); $spouse = $stmtS->fetch();
         $stmtC      = $pdo->prepare("SELECT * FROM applicant_dependants WHERE applicant_id=? ORDER BY id"); $stmtC->execute([$app['applicant_id']]); $dependants = $stmtC->fetchAll();
@@ -209,7 +246,7 @@ class ApplicationController
             $d = $_POST;
             $isDraft = isset($d['save_draft']);
 
-            // In edit mode, village_id might be disabled and thus missing from POST
+            // Village ID fix: If disabled in UI (edit mode restriction), use existing value
             if (!isset($d['village_id'])) {
                 $d['village_id'] = $app['village_id'];
             }
@@ -225,7 +262,7 @@ class ApplicationController
             if (!$errors) {
                 $pdo->beginTransaction();
                 
-                // For drafts, ensure NOT NULL columns have values
+                // Drafting logic for mandatory fields
                 if ($isDraft) {
                     if (empty($d['fund_category_id'])) {
                         $d['fund_category_id'] = $pdo->query("SELECT id FROM fund_categories WHERE is_active=1 LIMIT 1")->fetchColumn() ?: 0;
@@ -235,7 +272,7 @@ class ApplicationController
                     }
                 }
                 
-                // Determine new status
+                // Status progression
                 $status  = $app['status'];
                 $isValid = (int)$app['is_valid'];
 
@@ -243,11 +280,13 @@ class ApplicationController
                     $status = STATUS_DRAFT;
                     $isValid = 0;
                 } elseif ($status === STATUS_DRAFT) {
-                    // Promoting from draft to real application
+                    // Transitioning from a saved Draft to a real submission
                     $isHigherRole = $auth->hasRole([ROLE_VILLAGE_INCHARGE, ROLE_OVERALL_INCHARGE, ROLE_SYSADMIN]);
                     $status  = $isHigherRole ? STATUS_SUBMITTED  : STATUS_PENDING_VALIDATION;
                     $isValid = $isHigherRole ? 1 : 0;
                 }
+
+                // 1. Audit Logging (Applicants table)
                 $fields = [
                     'full_name','address','gender','age','id_number','telephone','telephone_home',
                     'marital_status','residency_status','occupation','employer_details','notes'
@@ -258,6 +297,7 @@ class ApplicationController
                     }
                 }
                 
+                // 2. Audit Logging (Applications table)
                 $appFields = ['fund_category_id','amount_requested','requested_type','requested_installment','requested_count','reason_for_application','applied_other_funds','expected_date'];
                 foreach ($appFields as $f) {
                     if (($app[$f] ?? '') != ($d[$f] ?? '')) {
@@ -265,6 +305,7 @@ class ApplicationController
                     }
                 }
 
+                // 3. Update DB Records
                 $pdo->prepare("UPDATE applicants SET 
                     full_name=?, address=?, gender=?, age=?, id_number=?, telephone=?, telephone_home=?, 
                     marital_status=?, residency_status=?, occupation=?, employer_details=?, notes=? 
@@ -283,7 +324,7 @@ class ApplicationController
                         $d['reason_for_application']??'',$d['applied_other_funds']??'',$d['expected_date']?:null,$id
                     ]);
 
-                // Dependants
+                // 4. Refresh Dependants (Wipe and re-insert for simplicity)
                 $pdo->prepare("DELETE FROM applicant_dependants WHERE applicant_id=?")->execute([$app['applicant_id']]);
                 if (!empty($d['dep_name'])) {
                     $stmt = $pdo->prepare("INSERT INTO applicant_dependants (applicant_id,full_name,age,gender,relationship,occupation,income) VALUES (?,?,?,?,?,?,?)");
@@ -297,18 +338,22 @@ class ApplicationController
                         ]);
                     }
                 }
+
+                // 5. Handle additional document uploads
                 if (!empty($_FILES['documents']['name'][0])) {
                     $upload = new Upload($pdo, $auth->id());
                     $upload->storeMultiple($_FILES['documents'], $id, $d['doc_description'] ?? '');
                 }
+
                 $logger->appLog($id, $auth->id(), 'edited', 'Application edited.');
                 $logger->activity($auth->id(), 'edit_application', 'application', $id);
                 $pdo->commit();
+
                 flash('success', 'Application updated.'); redirect('index.php?page=applications.view&id='.$id);
             }
         }
 
-        // Rebuild dependants from POST if validation failed, else use DB
+        // Error recovery: rebuild dependants from POST
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && $errors) {
             $dependants = [];
             if (!empty($_POST['dep_name'])) {
@@ -326,12 +371,21 @@ class ApplicationController
             }
         }
 
+        $appId = $id;
         $pageTitle = 'Edit Project #' . $id;
         $activePage = 'applications';
         require __DIR__ . '/../views/applications/edit.php';
     }
 
-    // ── View ──────────────────────────────────────────────────────────────────
+    /**
+     * Displays a comprehensive view of a single application.
+     * Includes applicant details, dependants, documents, timeline, and edit history.
+     * 
+     * @param PDO $pdo The database connection instance.
+     * @param Auth $auth The authentication service.
+     * @param Logger $logger The activity logging service.
+     * @return void
+     */
     public static function view(PDO $pdo, Auth $auth, Logger $logger): void
     {
         $auth->requireLogin();
@@ -340,13 +394,19 @@ class ApplicationController
         if (!$app || !$auth->canViewApplication($app)) {
             flash('error', 'Not found or access denied.'); redirect('index.php?page=applications');
         }
+        
+        // Load Profile
         $stmt = $pdo->prepare("SELECT * FROM applicants WHERE id=?"); $stmt->execute([$app['applicant_id']]); $applicant = $stmt->fetch();
         $stmtS = $pdo->prepare("SELECT * FROM applicant_spouse WHERE applicant_id=?"); $stmtS->execute([$app['applicant_id']]); $spouse = $stmtS->fetch();
         $stmtC = $pdo->prepare("SELECT * FROM applicant_dependants WHERE applicant_id=? ORDER BY id"); $stmtC->execute([$app['applicant_id']]); $dependants = $stmtC->fetchAll();
+        
+        // Load Audits & Assets
         $timeline    = $logger->getTimeline($id);
         $editHistory = $logger->getEditHistory($id);
         $upload      = new Upload($pdo, $auth->id());
         $documents   = $upload->getForApplication($id);
+        
+        // Load Financials
         $stmtD = $pdo->prepare("SELECT d.*,u.full_name AS auth_name FROM disbursements d LEFT JOIN users u ON u.id=d.authorized_by WHERE d.application_id=? ORDER BY d.installment_no");
         $stmtD->execute([$id]); $disbursements = $stmtD->fetchAll();
 
@@ -354,39 +414,59 @@ class ApplicationController
         require __DIR__ . '/../views/applications/view.php';
     }
 
-    // ── Pending Validation Queue ──────────────────────────────────────────────
+    /**
+     * Lists applications awaiting 1.b validation.
+     * 
+     * @param PDO $pdo The database connection instance.
+     * @param Auth $auth The authentication service.
+     * @param Logger $logger The activity logging service.
+     * @return void
+     */
     public static function pending(PDO $pdo, Auth $auth, Logger $logger): void
     {
         $auth->requireRole([ROLE_DATA_ENTRY, ROLE_VILLAGE_INCHARGE, ROLE_OVERALL_INCHARGE, ROLE_SYSADMIN]);
         $villages = $auth->myVillages();
+        
+        // Scope: Status must be "pending_validation" and user cannot validate their own entry (unless 1.b+)
         $where = ["a.status = 'pending_validation'", "a.created_by != ?"];
         $params = [$auth->id()];
+        
         if ($villages && !$auth->hasRole([ROLE_OVERALL_INCHARGE, ROLE_SYSADMIN])) {
             $ph = implode(',', array_fill(0, count($villages), '?'));
             $where[] = "ap.village_id IN ($ph)";
             $params  = array_merge($params, $villages);
         }
+        
         $sql = "SELECT a.*, ap.full_name AS applicant_name, v.name AS village_name, fc.name AS category_name, u.full_name AS creator_name
                 FROM applications a JOIN applicants ap ON ap.id=a.applicant_id JOIN villages v ON v.id=ap.village_id
                 JOIN fund_categories fc ON fc.id=a.fund_category_id JOIN users u ON u.id=a.created_by
                 WHERE " . implode(' AND ', $where) . " ORDER BY a.created_at ASC";
+        
         $page   = max(1,(int)($_GET['p']??1));
         $result = paginate($pdo, $sql, $params, $page);
         $pageTitle = 'Pending Validation'; $activePage = 'pending';
         require __DIR__ . '/../views/applications/pending.php';
     }
 
-    // ── Validate (1.b or 1.c validates data entry) ───────────────────────────
+    /**
+     * Processes a "Validation" (Peer Review) by a 1.b user.
+     * Confirms that the application data is accurate and ready for management review.
+     * 
+     * @param PDO $pdo The database connection instance.
+     * @param Auth $auth The authentication service.
+     * @param Logger $logger The activity logging service.
+     * @return void
+     */
     public static function validateApp(PDO $pdo, Auth $auth, Logger $logger): void
     {
         $auth->requireRole([ROLE_VILLAGE_INCHARGE, ROLE_OVERALL_INCHARGE, ROLE_SYSADMIN]);
         $id  = (int)($_GET['id'] ?? 0);
         $app = self::_loadApp($pdo, $id);
+        
         if (!$app || $app['status'] !== STATUS_PENDING_VALIDATION) {
             flash('error', 'Not available for validation.'); redirect('index.php?page=applications.pending');
         }
         
-        // 1.a cannot validate. 1.b/1.c can validate, including their own if they created it (per requirement)
         if (!$auth->canViewApplication($app)) {
             flash('error', 'Access denied.'); redirect('index.php?page=applications.pending');
         }
@@ -413,7 +493,15 @@ class ApplicationController
         require __DIR__ . '/../views/applications/validate.php';
     }
 
-    // ── Revert to Unvalidated (1.c push back) ─────────────────────────────────
+    /**
+     * Pushes a validated application back to the unvalidated state.
+     * Usually used by 1.c if data quality issues are found.
+     * 
+     * @param PDO $pdo The database connection instance.
+     * @param Auth $auth The authentication service.
+     * @param Logger $logger The activity logging service.
+     * @return void
+     */
     public static function revert(PDO $pdo, Auth $auth, Logger $logger): void
     {
         $auth->requireRole([ROLE_OVERALL_INCHARGE, ROLE_SYSADMIN]);
@@ -432,7 +520,15 @@ class ApplicationController
         redirect('index.php?page=applications.view&id='.$id);
     }
 
-    // ── Hold Application (1.c) ───────────────────────────────────────────────
+    /**
+     * Marks an application as "Privileged".
+     * Privileged applications are only visible to management roles (1.c and Sysadmin).
+     * 
+     * @param PDO $pdo The database connection instance.
+     * @param Auth $auth The authentication service.
+     * @param Logger $logger The activity logging service.
+     * @return void
+     */
     public static function hold(PDO $pdo, Auth $auth, Logger $logger): void
     {
         $auth->requireRole([ROLE_OVERALL_INCHARGE, ROLE_SYSADMIN]);
@@ -441,7 +537,7 @@ class ApplicationController
         $app = self::_loadApp($pdo, $id);
         if (!$app) { flash('error','Not found.'); redirect('index.php?page=applications'); }
         
-        // Allowed only if validated or beyond
+        // Only validated/submitted projects can be put on hold
         if (!$app['is_valid']) {
             flash('error', 'Only validated projects can be put on hold.'); redirect('index.php?page=applications.view&id='.$id);
         }
@@ -449,6 +545,7 @@ class ApplicationController
         $comment = trim($_POST['comment'] ?? '');
         if (!$comment) { flash('error', 'Comment is required to put on hold.'); redirect('index.php?page=applications.view&id='.$id); }
 
+        // Store current status in previous_status for later restoration
         $pdo->prepare("UPDATE applications SET previous_status=status, status=?, updated_at=CURRENT_TIMESTAMP WHERE id=?")
             ->execute([STATUS_ON_HOLD, $id]);
         
@@ -458,7 +555,15 @@ class ApplicationController
         redirect('index.php?page=applications.view&id='.$id);
     }
 
-    // ── Unhold Application (1.c) ─────────────────────────────────────────────
+    /**
+     * Permanently deletes an application and all its related records.
+     * (Applicant profile, dependants, documents, logs, and disbursements).
+     * 
+     * @param PDO $pdo The database connection instance.
+     * @param Auth $auth The authentication service.
+     * @param Logger $logger The activity logging service.
+     * @return void
+     */
     public static function unhold(PDO $pdo, Auth $auth, Logger $logger): void
     {
         $auth->requireRole([ROLE_OVERALL_INCHARGE, ROLE_SYSADMIN]);
@@ -480,7 +585,14 @@ class ApplicationController
         redirect('index.php?page=applications.view&id='.$id);
     }
 
-    // ── Advisory Comment ──────────────────────────────────────────────────────
+    /**
+     * Adds an internal/advisory comment to an application or village scope.
+     * 
+     * @param PDO $pdo The database connection instance.
+     * @param Auth $auth The authentication service.
+     * @param Logger $logger The activity logging service.
+     * @return void
+     */
     public static function comment(PDO $pdo, Auth $auth, Logger $logger): void
     {
         $auth->requireLogin();
@@ -490,9 +602,11 @@ class ApplicationController
         if (!$comment) { flash('error','Comment cannot be empty.'); redirect('index.php?page=applications'); }
 
         if ($bulk) {
+            // Bulk comments are restricted to management
             $auth->requireRole([ROLE_OVERALL_INCHARGE, ROLE_SYSADMIN, ROLE_VERIFICATION]);
             $villageId = (int)($_POST['village_id'] ?? 0);
             if (!$auth->isInVillage($villageId)) { flash('error','Access denied.'); redirect('index.php?page=applications'); }
+            
             $stmt = $pdo->prepare("SELECT a.id FROM applications a JOIN applicants ap ON ap.id=a.applicant_id WHERE ap.village_id=? AND a.status NOT IN ('draft','pending_validation','rejected')");
             $stmt->execute([$villageId]);
             foreach ($stmt->fetchAll(PDO::FETCH_COLUMN) as $appId) {
@@ -501,14 +615,15 @@ class ApplicationController
             $logger->activity($auth->id(), 'bulk_comment', 'village', $villageId);
             flash('success', 'Bulk comment added.');
         } else {
+            // Single application comment
             $id  = (int)($_POST['application_id'] ?? 0);
             $app = self::_loadApp($pdo, $id);
             if (!$app || !$auth->canViewApplication($app)) { flash('error','Access denied.'); redirect('index.php?page=applications'); }
             
-            // Check if user is 1.c, or creator (1.a), or validator (1.b)
-            $isCreator = ($app['created_by'] == $auth->id());
+            // Commenting Permission logic
+            $isCreator   = ($app['created_by'] == $auth->id());
             $isValidator = ($app['validated_by'] == $auth->id());
-            $isOverall = $auth->hasRole([ROLE_OVERALL_INCHARGE, ROLE_SYSADMIN]);
+            $isOverall   = $auth->hasRole([ROLE_OVERALL_INCHARGE, ROLE_SYSADMIN]);
 
             if (!$isCreator && !$isValidator && !$isOverall && !$auth->hasRole(ROLE_VERIFICATION)) {
                 flash('error', 'You do not have permission to comment on this application.');
@@ -523,7 +638,15 @@ class ApplicationController
         redirect('index.php?page=applications');
     }
 
-    // ── Review (1.b) ─────────────────────────────────────────────────────────
+    /**
+     * Performs the 1.b level review.
+     * Transitions from "Submitted" to "Under Review".
+     * 
+     * @param PDO $pdo The database connection instance.
+     * @param Auth $auth The authentication service.
+     * @param Logger $logger The activity logging service.
+     * @return void
+     */
     public static function review(PDO $pdo, Auth $auth, Logger $logger): void
     {
         $auth->requireRole(ROLE_VILLAGE_INCHARGE);
@@ -549,7 +672,15 @@ class ApplicationController
         redirect('index.php?page=applications.view&id='.$id);
     }
 
-    // ── Approve (1.c) ────────────────────────────────────────────────────────
+    /**
+     * Final Approval (1.c).
+     * Transitions to "Disbursing" and automatically generates the payment schedule.
+     * 
+     * @param PDO $pdo The database connection instance.
+     * @param Auth $auth The authentication service.
+     * @param Logger $logger The activity logging service.
+     * @return void
+     */
     public static function approve(PDO $pdo, Auth $auth, Logger $logger): void
     {
         $auth->requireRole(ROLE_OVERALL_INCHARGE);
@@ -572,13 +703,14 @@ class ApplicationController
 
         $pdo->beginTransaction();
         
-        // Update application
+        // 1. Update status and store approved guidelines
         $pdo->prepare("UPDATE applications SET status='disbursing', approved_by=?, updated_at=CURRENT_TIMESTAMP, 
                         disbursement_type=?, disbursement_amount=?, disbursement_count=?, disbursement_start_date=? 
                         WHERE id=?")
             ->execute([$auth->id(), $type, $amount, $count, $start, $id]);
 
-        // Generate schedule (clear any existing)
+        // 2. Generate Schedule
+        // Wipes any existing schedule (shouldn't be any at this stage, but for safety)
         $pdo->prepare("DELETE FROM disbursements WHERE application_id=?")->execute([$id]);
         $stmt = $pdo->prepare("INSERT INTO disbursements (application_id,installment_no,due_date,amount) VALUES (?,?,?,?)");
         $dt   = new DateTime($start);
@@ -602,7 +734,14 @@ class ApplicationController
         redirect('index.php?page=applications.view&id='.$id);
     }
 
-    // ── Reject (1.b or 1.c) ───────────────────────────────────────────────────
+    /**
+     * Deletes a document attachment.
+     * 
+     * @param PDO $pdo The database connection instance.
+     * @param Auth $auth The authentication service.
+     * @param Logger $logger The activity logging service.
+     * @return void
+     */
     public static function reject(PDO $pdo, Auth $auth, Logger $logger): void
     {
         $auth->requireRole([ROLE_VILLAGE_INCHARGE, ROLE_OVERALL_INCHARGE]);
@@ -621,7 +760,14 @@ class ApplicationController
         redirect('index.php?page=applications.view&id='.$id);
     }
 
-    // ── Privileged Toggle (1.c) ───────────────────────────────────────────────
+    /**
+     * Toggles the "Privileged" visibility flag on an application.
+     * 
+     * @param PDO $pdo The database connection instance.
+     * @param Auth $auth The authentication service.
+     * @param Logger $logger The activity logging service.
+     * @return void
+     */
     public static function setPrivileged(PDO $pdo, Auth $auth, Logger $logger): void
     {
         $auth->requireRole([ROLE_OVERALL_INCHARGE, ROLE_SYSADMIN]);
@@ -637,7 +783,14 @@ class ApplicationController
         redirect('index.php?page=applications.view&id='.$id);
     }
 
-    // ── Upload Documents ──────────────────────────────────────────────────────
+    /**
+     * Handles document uploads for an existing application.
+     * 
+     * @param PDO $pdo The database connection instance.
+     * @param Auth $auth The authentication service.
+     * @param Logger $logger The activity logging service.
+     * @return void
+     */
     public static function uploadDoc(PDO $pdo, Auth $auth, Logger $logger): void
     {
         $auth->requireLogin();
@@ -646,10 +799,10 @@ class ApplicationController
         $app = self::_loadApp($pdo, $id);
         if (!$app || !$auth->canViewApplication($app)) { flash('error','Access denied.'); redirect('index.php?page=applications'); }
         
-        // Check permissions: 1.c, or creator (1.a), or validator (1.b)
-        $isCreator = ($app['created_by'] == $auth->id());
+        // Permitted to upload: Creator, Validator, or Overall In-charge
+        $isCreator   = ($app['created_by'] == $auth->id());
         $isValidator = ($app['validated_by'] == $auth->id());
-        $isOverall = $auth->hasRole([ROLE_OVERALL_INCHARGE, ROLE_SYSADMIN]);
+        $isOverall   = $auth->hasRole([ROLE_OVERALL_INCHARGE, ROLE_SYSADMIN]);
 
         if (!$isCreator && !$isValidator && !$isOverall) {
             flash('error', 'You do not have permission to upload documents to this application.');
@@ -668,7 +821,14 @@ class ApplicationController
         redirect('index.php?page=applications.view&id='.$id);
     }
 
-    // ── Delete Document ───────────────────────────────────────────────────────
+    /**
+     * Deletes a document. Only uploader or Sysadmin can delete.
+     * 
+     * @param PDO $pdo The database connection instance.
+     * @param Auth $auth The authentication service.
+     * @param Logger $logger The activity logging service.
+     * @return void
+     */
     public static function deleteDoc(PDO $pdo, Auth $auth, Logger $logger): void
     {
         $auth->requireLogin();
@@ -677,18 +837,26 @@ class ApplicationController
         $upload = new Upload($pdo, $auth->id());
         $doc    = $upload->getById($docId);
         if (!$doc) { flash('error','Not found.'); redirect('index.php?page=applications'); }
-        // Only uploader or sysadmin can delete
+        
         if ($doc['uploaded_by'] != $auth->id() && !$auth->hasRole(ROLE_SYSADMIN)) {
             flash('error','Cannot delete this document.'); redirect('index.php?page=applications.view&id='.$doc['application_id']);
         }
+        
         $upload->delete($docId);
         $logger->appLog((int)$doc['application_id'],$auth->id(),'document_deleted','Doc #'.$docId.' deleted.');
         flash('success','Document deleted.');
         redirect('index.php?page=applications.view&id='.$doc['application_id']);
     }
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
-    // ── Adjust Schedule (1.c) ────────────────────────────────────────────────
+    /**
+     * Re-calculates and replaces the remaining disbursement schedule.
+     * Preserves "Released" payments and modifies everything else.
+     * 
+     * @param PDO $pdo The database connection instance.
+     * @param Auth $auth The authentication service.
+     * @param Logger $logger The activity logging service.
+     * @return void
+     */
     public static function adjustSchedule(PDO $pdo, Auth $auth, Logger $logger): void
     {
         $auth->requireRole([ROLE_OVERALL_INCHARGE, ROLE_SYSADMIN]);
@@ -718,19 +886,19 @@ class ApplicationController
 
         $pdo->beginTransaction();
 
-        // 1. Identify what's already released (don't touch these)
+        // 1. Preserve released payments
         $stmtReleased = $pdo->prepare("SELECT COUNT(*) FROM disbursements WHERE application_id=? AND status='released'");
         $stmtReleased->execute([$id]);
         $releasedCount = (int)$stmtReleased->fetchColumn();
 
-        // 2. Delete PENDING, AUTHORIZED and CANCELLED installments (future/non-paid)
+        // 2. Wipe everything that hasn't been paid out yet
         $pdo->prepare("DELETE FROM disbursements WHERE application_id=? AND status IN ('pending', 'authorized', 'cancelled')")->execute([$id]);
 
-        // 3. Update application record
+        // 3. Update application totals
         $pdo->prepare("UPDATE applications SET disbursement_type=?, disbursement_amount=?, disbursement_count=?, updated_at=CURRENT_TIMESTAMP WHERE id=?")
             ->execute([$type, $amount, $releasedCount + $count, $id]);
 
-        // 4. Insert new installments starting from the provided date
+        // 4. Regenerate future installments
         $stmt = $pdo->prepare("INSERT INTO disbursements (application_id,installment_no,due_date,amount) VALUES (?,?,?,?)");
         $dt   = new DateTime($start);
         for ($i = 1; $i <= $count; $i++) {
@@ -754,6 +922,13 @@ class ApplicationController
         redirect('index.php?page=applications.view&id='.$id);
     }
 
+    /**
+     * Internal helper to fetch a complete application dataset for rendering or logic.
+     * 
+     * @param PDO $pdo The database connection instance.
+     * @param int $id The application ID.
+     * @return array|null The application data array or null if not found.
+     */
     private static function _loadApp(PDO $pdo, int $id): ?array
     {
         $stmt = $pdo->prepare("
@@ -767,6 +942,13 @@ class ApplicationController
         return $stmt->fetch() ?: null;
     }
 
+    /**
+     * Internal helper to determine which villages the current user can manage.
+     * 
+     * @param PDO $pdo The database connection instance.
+     * @param Auth $auth The authentication service.
+     * @return array List of villages (id and name).
+     */
     private static function _allowedVillages(PDO $pdo, Auth $auth): array
     {
         if ($auth->hasRole([ROLE_OVERALL_INCHARGE, ROLE_SYSADMIN])) {

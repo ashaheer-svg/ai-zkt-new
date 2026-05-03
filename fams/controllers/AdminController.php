@@ -1,7 +1,22 @@
 <?php
+/**
+ * Admin Controller
+ * 
+ * Central hub for system administration. Handles user management, village (Thackiya)
+ * configuration, fund categories, system settings, and critical maintenance tasks
+ * like backups and database resets. Access is strictly limited to Sysadmins (1.c+).
+ */
 class AdminController
 {
-    // ── Users ─────────────────────────────────────────────────────────────────
+    /**
+     * Manages system users. 
+     * Handles creation, editing, status toggling, and village-level scoping assignments.
+     * 
+     * @param PDO $pdo The database connection instance.
+     * @param Auth $auth The authentication service.
+     * @param Logger $logger The activity logging service.
+     * @return void
+     */
     public static function users(PDO $pdo, Auth $auth, Logger $logger): void
     {
         $auth->requireRole(ROLE_SYSADMIN);
@@ -21,7 +36,8 @@ class AdminController
                     $stmt = $pdo->prepare("INSERT INTO users (username,password_hash,full_name,role) VALUES (?,?,?,?)");
                     $stmt->execute([$d['username'],$hash,$d['full_name'],$d['role']]);
                     $uid = (int)$pdo->lastInsertId();
-                    // Village assignments
+                    
+                    // Assign user to managed villages
                     if (!empty($d['villages'])) {
                         $sv = $pdo->prepare("INSERT OR IGNORE INTO user_villages (user_id,village_id) VALUES (?,?)");
                         foreach ((array)$d['villages'] as $vid) { $sv->execute([$uid,(int)$vid]); }
@@ -40,6 +56,8 @@ class AdminController
                 if (!empty($d['password'])) {
                     $pdo->prepare("UPDATE users SET password_hash=? WHERE id=?")->execute([password_hash($d['password'],PASSWORD_DEFAULT),$uid]);
                 }
+                
+                // Refresh village assignments
                 $pdo->prepare("DELETE FROM user_villages WHERE user_id=?")->execute([$uid]);
                 if (!empty($d['villages'])) {
                     $sv = $pdo->prepare("INSERT OR IGNORE INTO user_villages (user_id,village_id) VALUES (?,?)");
@@ -66,7 +84,7 @@ class AdminController
         $users = $result['rows'];
         $pagination = $result;
 
-        // Load village assignments
+        // Map users to their assigned villages for the UI view
         $uvStmt = $pdo->query("SELECT uv.user_id, v.name, v.district FROM user_villages uv JOIN villages v ON v.id=uv.village_id");
         $uvMap  = [];
         foreach ($uvStmt->fetchAll() as $row) { 
@@ -78,7 +96,14 @@ class AdminController
         require __DIR__ . '/../views/admin/users.php';
     }
 
-    // ── Villages ──────────────────────────────────────────────────────────────
+    /**
+     * Manages villages (geographically scoped units).
+     * 
+     * @param PDO $pdo The database connection instance.
+     * @param Auth $auth The authentication service.
+     * @param Logger $logger The activity logging service.
+     * @return void
+     */
     public static function villages(PDO $pdo, Auth $auth, Logger $logger): void
     {
         $auth->requireRole(ROLE_SYSADMIN);
@@ -112,7 +137,13 @@ class AdminController
         require __DIR__ . '/../views/admin/villages.php';
     }
 
-    // ── Fund Categories ───────────────────────────────────────────────────────
+    /**
+     * Configures fund categories.
+     * 
+     * @param PDO $pdo
+     * @param Auth $auth
+     * @param Logger $logger
+     */
     public static function categories(PDO $pdo, Auth $auth, Logger $logger): void
     {
         $auth->requireRole(ROLE_SYSADMIN);
@@ -145,7 +176,15 @@ class AdminController
         require __DIR__ . '/../views/admin/categories.php';
     }
 
-    // ── Audit Log ─────────────────────────────────────────────────────────────
+    /**
+     * Displays a financial summary of all village allocations.
+     * Shows committed vs released funds per geographic unit.
+     * 
+     * @param PDO $pdo The database connection instance.
+     * @param Auth $auth The authentication service.
+     * @param Logger $logger The activity logging service.
+     * @return void
+     */
     public static function audit(PDO $pdo, Auth $auth, Logger $logger): void
     {
         $auth->requireRole(ROLE_SYSADMIN);
@@ -167,6 +206,14 @@ class AdminController
         require __DIR__ . '/../views/admin/audit_log.php';
     }
 
+    /**
+     * Manages geographic budget allocations.
+     * 
+     * @param PDO $pdo The database connection instance.
+     * @param Auth $auth The authentication service.
+     * @param Logger $logger The activity logging service.
+     * @return void
+     */
     public static function allocations(PDO $pdo, Auth $auth, Logger $logger): void
     {
         $auth->requireRole([ROLE_OVERALL_INCHARGE, ROLE_SYSADMIN]);
@@ -181,7 +228,7 @@ class AdminController
             redirect('index.php?page=admin.allocations');
         }
 
-        // Fetch villages with total used amount (released) and committed amount (approved but pending)
+        // Aggregate released vs committed funds per village
         $sql = "SELECT v.*, 
                 (SELECT SUM(d.amount) 
                  FROM disbursements d 
@@ -212,6 +259,14 @@ class AdminController
         require __DIR__ . '/../views/admin/allocations.php';
     }
 
+    /**
+     * Manages system-wide configuration and API token generation.
+     * 
+     * @param PDO $pdo The database connection instance.
+     * @param Auth $auth The authentication service.
+     * @param Logger $logger The activity logging service.
+     * @return void
+     */
     public static function settings(PDO $pdo, Auth $auth, Logger $logger): void
     {
         $auth->requireRole(ROLE_SYSADMIN);
@@ -235,7 +290,7 @@ class AdminController
                 $token = bin2hex(random_bytes(32));
                 $expires = date('Y-m-d H:i:s', strtotime('+365 days'));
                 
-                // Delete old tokens for this user to keep it simple (single device per user)
+                // One active token per user
                 $pdo->prepare("DELETE FROM api_tokens WHERE user_id=?")->execute([$uid]);
                 $pdo->prepare("INSERT INTO api_tokens (user_id, token, expires_at) VALUES (?, ?, ?)")
                     ->execute([$uid, $token, $expires]);
@@ -249,14 +304,20 @@ class AdminController
         $settings = $pdo->query("SELECT * FROM settings")->fetchAll(PDO::FETCH_KEY_PAIR);
         $timezones = DateTimeZone::listIdentifiers();
         $users = $pdo->query("SELECT id, username, full_name, role FROM users WHERE is_active=1 ORDER BY full_name")->fetchAll();
-        
-        // Fetch current tokens for display
         $tokens = $pdo->query("SELECT t.*, u.full_name FROM api_tokens t JOIN users u ON u.id = t.user_id")->fetchAll();
 
         $pageTitle = 'System Settings'; $activePage = 'admin.settings';
         require __DIR__ . '/../views/admin/settings.php';
     }
 
+    /**
+     * Configures allowed document types.
+     * 
+     * @param PDO $pdo The database connection instance.
+     * @param Auth $auth The authentication service.
+     * @param Logger $logger The activity logging service.
+     * @return void
+     */
     public static function doc_types(PDO $pdo, Auth $auth, Logger $logger): void
     {
         $auth->requireRole(ROLE_SYSADMIN);
@@ -288,6 +349,15 @@ class AdminController
         require __DIR__ . '/../views/admin/doc_types.php';
     }
 
+    /**
+     * Disaster Recovery: Performs a Factory Reset of the entire system.
+     * Wipes all data tables and re-seeds default admin credentials.
+     * 
+     * @param PDO $pdo The database connection instance.
+     * @param Auth $auth The authentication service.
+     * @param Logger $logger The activity logging service.
+     * @return void
+     */
     public static function system(PDO $pdo, Auth $auth, Logger $logger): void
     {
         $auth->requireRole(ROLE_SYSADMIN);
@@ -295,7 +365,6 @@ class AdminController
         $dbPath = __DIR__ . '/../database/fams.sqlite';
         $dbSize = file_exists($dbPath) ? filesize($dbPath) : 0;
         
-        // Disk usage (root)
         $diskTotal = disk_total_space("/");
         $diskFree  = disk_free_space("/");
         $diskUsed  = $diskTotal - $diskFree;
@@ -316,6 +385,15 @@ class AdminController
         require __DIR__ . '/../views/admin/system.php';
     }
 
+    /**
+     * Wipes all data and re-initializes the database.
+     * CRITICAL: Irreversible operation. Requires typing "RESET" in UI.
+     * 
+     * @param PDO $pdo The database connection instance.
+     * @param Auth $auth The authentication service.
+     * @param Logger $logger The activity logging service.
+     * @return void
+     */
     public static function resetDB(PDO $pdo, Auth $auth, Logger $logger): void
     {
         $auth->requireRole(ROLE_SYSADMIN);
@@ -328,14 +406,12 @@ class AdminController
 
         try {
             dropAllTables($pdo);
-            // Re-initialize via getDB triggers or explicit calls
             _createSchema($pdo);
             _migrate($pdo);
             _seedAdmin($pdo);
 
             $logger->activity($auth->id(), 'reset_database', 'system', 0);
             
-            // Logout current user as sessions might be invalid or user might be gone
             session_destroy();
             header('Location: index.php?page=login&reset=success');
             exit;
@@ -345,6 +421,15 @@ class AdminController
         }
     }
 
+    /**
+     * Creates a full system ZIP backup.
+     * Includes all code, uploads, and the active database.
+     * 
+     * @param PDO $pdo The database connection instance.
+     * @param Auth $auth The authentication service.
+     * @param Logger $logger The activity logging service.
+     * @return void
+     */
     public static function fullBackup(PDO $pdo, Auth $auth, Logger $logger): void
     {
         $auth->requireRole(ROLE_SYSADMIN);
@@ -368,7 +453,7 @@ class AdminController
                 $filePath = $file->getRealPath();
                 $relativePath = substr($filePath, strlen($rootPath) + 1);
 
-                // Exclusions
+                // Exclude temporary/sensitive directories
                 if (str_contains($relativePath, 'sessions' . DIRECTORY_SEPARATOR)) continue;
                 if (str_contains($relativePath, '.git' . DIRECTORY_SEPARATOR)) continue;
                 if (str_contains($relativePath, '.gemini' . DIRECTORY_SEPARATOR)) continue;
@@ -379,7 +464,6 @@ class AdminController
         }
 
         $zip->close();
-
         $logger->activity($auth->id(), 'full_system_backup', 'system', 0);
 
         header('Content-Description: File Transfer');
@@ -394,6 +478,14 @@ class AdminController
         exit;
     }
 
+    /**
+     * Performs a full backup of the SQLite database file.
+     * 
+     * @param PDO $pdo The database connection instance.
+     * @param Auth $auth The authentication service.
+     * @param Logger $logger The activity logging service.
+     * @return void
+     */
     public static function db_backup(PDO $pdo, Auth $auth, Logger $logger): void
     {
         $auth->requireRole(ROLE_SYSADMIN);

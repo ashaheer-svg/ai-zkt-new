@@ -1,4 +1,17 @@
 <?php
+/**
+ * Database Configuration & Initialization
+ * 
+ * Manages SQLite connection, schema creation, migrations, and seeding.
+ * Uses Write-Ahead Logging (WAL) for better concurrency.
+ */
+
+/**
+ * Initializes and returns the PDO database connection.
+ * Automatically handles schema creation and migrations on first connect.
+ * 
+ * @return PDO
+ */
 function getDB(): PDO
 {
     static $pdo = null;
@@ -11,24 +24,33 @@ function getDB(): PDO
     $pdo = new PDO('sqlite:' . $dbPath);
     $pdo->setAttribute(PDO::ATTR_ERRMODE,            PDO::ERRMODE_EXCEPTION);
     $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
+    
+    // SQLite optimizations
     $pdo->exec('PRAGMA journal_mode=WAL');
     $pdo->exec('PRAGMA foreign_keys=ON');
 
     _createSchema($pdo);
     _migrate($pdo);
     _seedAdmin($pdo);
+    
     return $pdo;
 }
 
+/**
+ * Incremental Migrations
+ * Handles updates to the database schema without losing data.
+ * 
+ * @param PDO $pdo
+ */
 function _migrate(PDO $pdo): void
 {
-    // Add allocation_amount to villages if missing
+    // Villages table updates
     $cols = $pdo->query("PRAGMA table_info(villages)")->fetchAll(PDO::FETCH_COLUMN, 1);
     if (!in_array('allocation_amount', $cols)) {
         $pdo->exec("ALTER TABLE villages ADD COLUMN allocation_amount REAL DEFAULT 0");
     }
 
-    // Add doc columns to application_documents if missing
+    // Application documents updates
     $colsDoc = $pdo->query("PRAGMA table_info(application_documents)")->fetchAll(PDO::FETCH_COLUMN, 1);
     if (!in_array('doc_type', $colsDoc)) {
         $pdo->exec("ALTER TABLE application_documents ADD COLUMN doc_type TEXT");
@@ -37,13 +59,13 @@ function _migrate(PDO $pdo): void
         $pdo->exec("ALTER TABLE application_documents ADD COLUMN doc_language TEXT");
     }
 
-    // Rename applicant_children to applicant_dependants
+    // Rename applicant_children to applicant_dependants for inclusivity
     $tables = $pdo->query("SELECT name FROM sqlite_master WHERE type='table'")->fetchAll(PDO::FETCH_COLUMN);
     if (in_array('applicant_children', $tables) && !in_array('applicant_dependants', $tables)) {
         $pdo->exec("ALTER TABLE applicant_children RENAME TO applicant_dependants");
     }
 
-    // Add relationship to applicant_dependants
+    // Dependants table updates
     if (in_array('applicant_dependants', $tables)) {
         $cols = $pdo->query("PRAGMA table_info(applicant_dependants)")->fetchAll(PDO::FETCH_COLUMN, 1);
         if (!in_array('relationship', $cols)) {
@@ -51,13 +73,13 @@ function _migrate(PDO $pdo): void
         }
     }
 
-    // Add marital_status to applicants
+    // Applicant details updates
     $colsA = $pdo->query("PRAGMA table_info(applicants)")->fetchAll(PDO::FETCH_COLUMN, 1);
     if (!in_array('marital_status', $colsA)) {
         $pdo->exec("ALTER TABLE applicants ADD COLUMN marital_status TEXT");
     }
 
-    // Add requested schedule fields to applications
+    // Application workflow & scheduling updates
     $colsB = $pdo->query("PRAGMA table_info(applications)")->fetchAll(PDO::FETCH_COLUMN, 1);
     if (!in_array('requested_type', $colsB)) {
         $pdo->exec("ALTER TABLE applications ADD COLUMN requested_type TEXT");
@@ -72,13 +94,13 @@ function _migrate(PDO $pdo): void
         $pdo->exec("ALTER TABLE applications ADD COLUMN previous_status TEXT");
     }
 
-    // Add balance to users
+    // User wallet/balance updates
     $colsU = $pdo->query("PRAGMA table_info(users)")->fetchAll(PDO::FETCH_COLUMN, 1);
     if (!in_array('balance', $colsU)) {
         $pdo->exec("ALTER TABLE users ADD COLUMN balance REAL DEFAULT 0");
     }
 
-    // Create cash_transfers table
+    // Cash transfers tracking
     $pdo->exec("CREATE TABLE IF NOT EXISTS cash_transfers (
         id            INTEGER PRIMARY KEY AUTOINCREMENT,
         from_user_id  INTEGER NOT NULL,
@@ -90,7 +112,7 @@ function _migrate(PDO $pdo): void
         FOREIGN KEY (to_user_id)   REFERENCES users(id)
     )");
 
-    // Add assigned_to and payment fields to disbursements
+    // Disbursement tracking updates
     $colsD = $pdo->query("PRAGMA table_info(disbursements)")->fetchAll(PDO::FETCH_COLUMN, 1);
     if (!in_array('assigned_to', $colsD)) {
         $pdo->exec("ALTER TABLE disbursements ADD COLUMN assigned_to INTEGER");
@@ -111,9 +133,9 @@ function _migrate(PDO $pdo): void
         $pdo->exec("ALTER TABLE disbursements ADD COLUMN paid_by INTEGER");
     }
 
-    // --- 2026 Form Expansion ---
+    // --- 2026 Form Expansion Fields ---
     
-    // applicants table
+    // Additional applicant demographics
     $colsA = $pdo->query("PRAGMA table_info(applicants)")->fetchAll(PDO::FETCH_COLUMN, 1);
     if (!in_array('telephone_home', $colsA)) {
         $pdo->exec("ALTER TABLE applicants ADD COLUMN telephone_home TEXT");
@@ -128,7 +150,7 @@ function _migrate(PDO $pdo): void
         $pdo->exec("ALTER TABLE applicants ADD COLUMN employer_details TEXT");
     }
 
-    // applications table
+    // Additional application details
     $colsApp = $pdo->query("PRAGMA table_info(applications)")->fetchAll(PDO::FETCH_COLUMN, 1);
     if (!in_array('reason_for_application', $colsApp)) {
         $pdo->exec("ALTER TABLE applications ADD COLUMN reason_for_application TEXT");
@@ -140,7 +162,7 @@ function _migrate(PDO $pdo): void
         $pdo->exec("ALTER TABLE applications ADD COLUMN expected_date DATE");
     }
 
-    // applicant_dependants table
+    // Additional dependant details
     $colsDep = $pdo->query("PRAGMA table_info(applicant_dependants)")->fetchAll(PDO::FETCH_COLUMN, 1);
     if (!in_array('occupation', $colsDep)) {
         $pdo->exec("ALTER TABLE applicant_dependants ADD COLUMN occupation TEXT");
@@ -150,19 +172,27 @@ function _migrate(PDO $pdo): void
     }
 }
 
+/**
+ * Base Schema Creation
+ * 
+ * @param PDO $pdo
+ */
 function _createSchema(PDO $pdo): void
 {
     $pdo->exec("
+        -- Core Users & RBAC
         CREATE TABLE IF NOT EXISTS users (
             id            INTEGER PRIMARY KEY AUTOINCREMENT,
             username      TEXT    UNIQUE NOT NULL,
             password_hash TEXT    NOT NULL,
             full_name     TEXT    NOT NULL,
             role          TEXT    NOT NULL,
+            balance       REAL    DEFAULT 0,
             is_active     INTEGER NOT NULL DEFAULT 1,
             created_at    DATETIME DEFAULT CURRENT_TIMESTAMP
         );
 
+        -- Geographic Management
         CREATE TABLE IF NOT EXISTS villages (
             id         INTEGER PRIMARY KEY AUTOINCREMENT,
             name       TEXT    NOT NULL,
@@ -172,6 +202,7 @@ function _createSchema(PDO $pdo): void
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         );
 
+        -- Many-to-Many Assignment for RBAC scoping
         CREATE TABLE IF NOT EXISTS user_villages (
             user_id    INTEGER NOT NULL,
             village_id INTEGER NOT NULL,
@@ -180,6 +211,7 @@ function _createSchema(PDO $pdo): void
             FOREIGN KEY (village_id) REFERENCES villages(id) ON DELETE CASCADE
         );
 
+        -- Financial Categories
         CREATE TABLE IF NOT EXISTS fund_categories (
             id          INTEGER PRIMARY KEY AUTOINCREMENT,
             name        TEXT    NOT NULL,
@@ -188,21 +220,27 @@ function _createSchema(PDO $pdo): void
             created_at  DATETIME DEFAULT CURRENT_TIMESTAMP
         );
 
+        -- Main Entity: The Applicant
         CREATE TABLE IF NOT EXISTS applicants (
-            id         INTEGER PRIMARY KEY AUTOINCREMENT,
-            full_name  TEXT    NOT NULL,
-            address    TEXT,
-            gender     TEXT    NOT NULL,
-            age        INTEGER,
-            id_number  TEXT,
-            telephone  TEXT,
-            village_id INTEGER NOT NULL,
-            marital_status TEXT,
-            notes      TEXT,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            id               INTEGER PRIMARY KEY AUTOINCREMENT,
+            full_name        TEXT    NOT NULL,
+            address          TEXT,
+            gender           TEXT    NOT NULL,
+            age              INTEGER,
+            id_number        TEXT,
+            telephone        TEXT,
+            telephone_home   TEXT,
+            village_id       INTEGER NOT NULL,
+            marital_status   TEXT,
+            residency_status TEXT,
+            occupation       TEXT,
+            employer_details TEXT,
+            notes            TEXT,
+            created_at       DATETIME DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (village_id) REFERENCES villages(id)
         );
 
+        -- Applicant Spouse (1-to-1)
         CREATE TABLE IF NOT EXISTS applicant_spouse (
             id           INTEGER PRIMARY KEY AUTOINCREMENT,
             applicant_id INTEGER NOT NULL UNIQUE,
@@ -213,6 +251,7 @@ function _createSchema(PDO $pdo): void
             FOREIGN KEY (applicant_id) REFERENCES applicants(id) ON DELETE CASCADE
         );
 
+        -- Applicant Dependants (1-to-Many)
         CREATE TABLE IF NOT EXISTS applicant_dependants (
             id           INTEGER PRIMARY KEY AUTOINCREMENT,
             applicant_id INTEGER NOT NULL,
@@ -220,9 +259,12 @@ function _createSchema(PDO $pdo): void
             age          INTEGER,
             gender       TEXT,
             relationship TEXT,
+            occupation   TEXT,
+            income       REAL DEFAULT 0,
             FOREIGN KEY (applicant_id) REFERENCES applicants(id) ON DELETE CASCADE
         );
 
+        -- The Application Instance
         CREATE TABLE IF NOT EXISTS applications (
             id                   INTEGER PRIMARY KEY AUTOINCREMENT,
             applicant_id         INTEGER NOT NULL,
@@ -236,6 +278,9 @@ function _createSchema(PDO $pdo): void
             validated_at         DATETIME,
             reviewed_by          INTEGER,
             approved_by          INTEGER,
+            reason_for_application TEXT,
+            applied_other_funds  TEXT,
+            expected_date        DATE,
             disbursement_type    TEXT,
             disbursement_amount  REAL,
             disbursement_count   INTEGER,
@@ -254,6 +299,7 @@ function _createSchema(PDO $pdo): void
             FOREIGN KEY (approved_by)      REFERENCES users(id)
         );
 
+        -- Attached Files
         CREATE TABLE IF NOT EXISTS application_documents (
             id                INTEGER PRIMARY KEY AUTOINCREMENT,
             application_id    INTEGER NOT NULL,
@@ -270,13 +316,7 @@ function _createSchema(PDO $pdo): void
             FOREIGN KEY (uploaded_by)    REFERENCES users(id)
         );
 
-        CREATE TABLE IF NOT EXISTS document_types (
-            id         INTEGER PRIMARY KEY AUTOINCREMENT,
-            name       TEXT NOT NULL UNIQUE,
-            is_active  INTEGER DEFAULT 1,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        );
-
+        -- Mobile API Security
         CREATE TABLE IF NOT EXISTS api_tokens (
             id           INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id      INTEGER NOT NULL,
@@ -287,6 +327,7 @@ function _createSchema(PDO $pdo): void
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
         );
 
+        -- Auditing: Field-level changes
         CREATE TABLE IF NOT EXISTS application_edits (
             id             INTEGER PRIMARY KEY AUTOINCREMENT,
             application_id INTEGER NOT NULL,
@@ -299,6 +340,7 @@ function _createSchema(PDO $pdo): void
             FOREIGN KEY (edited_by)      REFERENCES users(id)
         );
 
+        -- Auditing: Lifecycle logs
         CREATE TABLE IF NOT EXISTS application_logs (
             id             INTEGER PRIMARY KEY AUTOINCREMENT,
             application_id INTEGER NOT NULL,
@@ -310,6 +352,7 @@ function _createSchema(PDO $pdo): void
             FOREIGN KEY (user_id)        REFERENCES users(id)
         );
 
+        -- Financial: Payment installments
         CREATE TABLE IF NOT EXISTS disbursements (
             id               INTEGER PRIMARY KEY AUTOINCREMENT,
             application_id   INTEGER NOT NULL,
@@ -319,12 +362,21 @@ function _createSchema(PDO $pdo): void
             status           TEXT    NOT NULL DEFAULT 'pending',
             authorized_by    INTEGER,
             authorized_at    DATETIME,
+            assigned_to      INTEGER,
+            payment_method   TEXT,
+            payment_date     DATE,
+            payment_reference TEXT,
+            paid_at          DATETIME,
+            paid_by          INTEGER,
             notes            TEXT,
             created_at       DATETIME DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (application_id) REFERENCES applications(id) ON DELETE CASCADE,
-            FOREIGN KEY (authorized_by)  REFERENCES users(id)
+            FOREIGN KEY (authorized_by)  REFERENCES users(id),
+            FOREIGN KEY (assigned_to)    REFERENCES users(id),
+            FOREIGN KEY (paid_by)        REFERENCES users(id)
         );
 
+        -- System-wide activity
         CREATE TABLE IF NOT EXISTS activity_log (
             id          INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id     INTEGER,
@@ -335,13 +387,26 @@ function _createSchema(PDO $pdo): void
             created_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (user_id) REFERENCES users(id)
         );
+
+        -- Key-Value Store for app settings
         CREATE TABLE IF NOT EXISTS settings (
             key   TEXT PRIMARY KEY,
             value TEXT
         );
+
+        -- Meta-data for document grouping
+        CREATE TABLE IF NOT EXISTS document_types (
+            id         INTEGER PRIMARY KEY AUTOINCREMENT,
+            name       TEXT NOT NULL UNIQUE,
+            is_active  INTEGER DEFAULT 1,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        );
     ");
 }
 
+/**
+ * Seeding Default Settings
+ */
 function _seedSettings(PDO $pdo): void
 {
     $defaults = [
@@ -354,9 +419,14 @@ function _seedSettings(PDO $pdo): void
     }
 }
 
+/**
+ * Seeding Administrative Data
+ */
 function _seedAdmin(PDO $pdo): void
 {
     _seedSettings($pdo);
+    
+    // Default Admin User
     $count = (int)$pdo->query('SELECT COUNT(*) FROM users')->fetchColumn();
     if ($count === 0) {
         $hash = password_hash('admin123', PASSWORD_DEFAULT);
@@ -364,7 +434,7 @@ function _seedAdmin(PDO $pdo): void
         $stmt->execute(['admin', $hash, 'System Administrator', 'sysadmin']);
     }
 
-    // Seed default doc types
+    // Default Document Types
     $countTypes = (int)$pdo->query('SELECT COUNT(*) FROM document_types')->fetchColumn();
     if ($countTypes === 0) {
         $types = ['Application Form', 'Photo', 'ID Copy', 'Address Proof', 'Other'];
@@ -373,12 +443,16 @@ function _seedAdmin(PDO $pdo): void
     }
 }
 
+/**
+ * Utility: Wipes all system tables (used for Factory Reset)
+ */
 function dropAllTables(PDO $pdo): void
 {
     $tables = [
         'disbursements', 'application_logs', 'application_edits', 
         'applications', 'applicants', 'user_villages', 'villages', 
-        'fund_categories', 'activity_log', 'settings', 'users'
+        'fund_categories', 'activity_log', 'settings', 'users', 'cash_transfers',
+        'api_tokens', 'document_types', 'applicant_spouse', 'applicant_dependants', 'application_documents'
     ];
     $pdo->exec('PRAGMA foreign_keys = OFF');
     foreach ($tables as $table) {

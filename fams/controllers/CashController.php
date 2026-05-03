@@ -1,6 +1,21 @@
 <?php
+/**
+ * Cash Controller
+ * 
+ * Manages the "Virtual Wallet" system. Handles cash transfers from management (1.c)
+ * to field staff (1.b) to facilitate physical disbursements. Tracks float balances
+ * and historical transfer records.
+ */
 class CashController
 {
+    /**
+     * Lists cash transfers and provides a balance summary for all field staff.
+     * Includes filtering by sender, receiver, and date range.
+     * 
+     * @param PDO $pdo
+     * @param Auth $auth
+     * @param Logger $logger
+     */
     public static function index(PDO $pdo, Auth $auth, Logger $logger): void
     {
         $auth->requireRole([ROLE_OVERALL_INCHARGE, ROLE_SYSADMIN]);
@@ -42,11 +57,11 @@ class CashController
         $transfers = $result['rows'];
         $pagination = $result;
 
-        // Fetch unique senders and receivers for filters
+        // Populate filter dropdowns
         $senders = $pdo->query("SELECT DISTINCT u.id, u.full_name FROM users u JOIN cash_transfers ct ON u.id = ct.from_user_id ORDER BY u.full_name")->fetchAll();
         $receivers = $pdo->query("SELECT DISTINCT u.id, u.full_name FROM users u JOIN cash_transfers ct ON u.id = ct.to_user_id ORDER BY u.full_name")->fetchAll();
 
-        // Fetch 1.b User Summary
+        // 1.b User Summary: Shows current balance vs authorized (committed) disbursement tasks
         $stmtSummary = $pdo->prepare("
             SELECT 
                 u.id, 
@@ -70,6 +85,14 @@ class CashController
         require __DIR__ . '/../views/cash/index.php';
     }
 
+    /**
+     * Executes a cash transfer from the current user to a field staff member.
+     * Updates virtual balances and records the audit trail.
+     * 
+     * @param PDO $pdo
+     * @param Auth $auth
+     * @param Logger $logger
+     */
     public static function transfer(PDO $pdo, Auth $auth, Logger $logger): void
     {
         $auth->requireRole([ROLE_OVERALL_INCHARGE, ROLE_SYSADMIN]);
@@ -85,7 +108,7 @@ class CashController
                 redirect('index.php?page=cash.transfer');
             }
 
-            // Verify target user is a 1.b user (Village In-Charge)
+            // Target must be capable of holding a float (1.b or 1.c)
             $stmt = $pdo->prepare("SELECT role FROM users WHERE id = ?");
             $stmt->execute([$toUserId]);
             $toUser = $stmt->fetch();
@@ -97,11 +120,11 @@ class CashController
 
             $pdo->beginTransaction();
             try {
-                // Record transfer
+                // Record the transaction
                 $stmt = $pdo->prepare("INSERT INTO cash_transfers (from_user_id, to_user_id, amount, reference) VALUES (?, ?, ?, ?)");
                 $stmt->execute([$auth->id(), $toUserId, $amount, $reference]);
 
-                // Update 1.b balance
+                // Increment target user's virtual balance
                 $stmt = $pdo->prepare("UPDATE users SET balance = balance + ? WHERE id = ?");
                 $stmt->execute([$amount, $toUserId]);
 
@@ -117,7 +140,7 @@ class CashController
             }
         }
 
-        // Fetch all 1.b and 1.c users
+        // List of eligible recipients
         $stmt = $pdo->prepare("SELECT id, full_name, username, role, balance FROM users WHERE role IN (?, ?) AND is_active = 1 ORDER BY role DESC, full_name");
         $stmt->execute([ROLE_VILLAGE_INCHARGE, ROLE_OVERALL_INCHARGE]);
         $recipients = $stmt->fetchAll();

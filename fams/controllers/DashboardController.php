@@ -1,11 +1,28 @@
 <?php
+/**
+ * Dashboard Controller
+ * 
+ * Provides high-level operational oversight for management and role-specific
+ * action items for field staff. Aggregates financial totals, application counts,
+ * and upcoming cash flow projections.
+ */
 class DashboardController
 {
+    /**
+     * Renders the primary dashboard overview.
+     * Logic branches based on user role to show relevant metrics:
+     * - 1.c (Management): Global totals, cash flow, and village summaries.
+     * - 1.b (Village Staff): Assigned payment instructions, geographic authorization totals, and wallet balance.
+     * 
+     * @param PDO $pdo
+     * @param Auth $auth
+     * @param Logger $logger
+     */
     public static function overview(PDO $pdo, Auth $auth, Logger $logger): void
     {
         $auth->requireRole([ROLE_OVERALL_INCHARGE, ROLE_SYSADMIN, ROLE_VILLAGE_INCHARGE]);
 
-        // ── Application counts by status ──────────────────────────────────────
+        // ── 1. Application distribution by state ────────────────────────────────
         $stmt = $pdo->query("
             SELECT status, COUNT(*) AS cnt
             FROM applications
@@ -17,7 +34,7 @@ class DashboardController
             $statusCounts[$row['status']] = (int)$row['cnt'];
         }
 
-        // ── Funds totals ──────────────────────────────────────────────────────
+        // ── 2. Global Financial Aggregates ──────────────────────────────────────
         $totalRequested = (float)$pdo->query(
             "SELECT COALESCE(SUM(amount_requested),0) FROM applications WHERE status != 'rejected'"
         )->fetchColumn();
@@ -30,7 +47,7 @@ class DashboardController
             "SELECT COALESCE(SUM(amount),0) FROM disbursements WHERE status = 'authorized'"
         )->fetchColumn();
 
-        // ── Cash flow: upcoming disbursements (next 90 days) ──────────────────
+        // ── 3. Cash Flow Projection (Next 90 Days) ───────────────────────────
         $stmt = $pdo->prepare("
             SELECT d.*, a.id AS app_id, ap.full_name AS applicant_name,
                    v.name AS village_name, fc.name AS category_name
@@ -52,7 +69,7 @@ class DashboardController
              WHERE status = 'pending' AND (due_date IS NULL OR due_date <= date('now','+90 days'))"
         )->fetchColumn();
 
-        // ── Per-village summary ───────────────────────────────────────────────
+        // ── 4. Geographic Performance Summary ───────────────────────────────
         $stmt = $pdo->query("
             SELECT v.name AS village, COUNT(a.id) AS total,
                    SUM(CASE WHEN a.status='approved' OR a.status='disbursing' OR a.status='completed' THEN 1 ELSE 0 END) AS approved,
@@ -66,7 +83,7 @@ class DashboardController
         ");
         $villageSummary = $stmt->fetchAll();
 
-        // ── Recent activity ───────────────────────────────────────────────────
+        // ── 5. System-wide Audit Stream ──────────────────────────────────────
         $stmt = $pdo->query("
             SELECT al.*, u.full_name, u.role
             FROM activity_log al
@@ -76,11 +93,12 @@ class DashboardController
         ");
         $recentActivity = $stmt->fetchAll();
 
-        // ── 1.b Specific Data ────────────────────────────────────────────────
+        // ── 6. Role-Specific action data (1.b / Field Staff) ──────────────
         $myBalance = 0;
         $myInstructions = [];
         $myVillageAuthorized = 0;
         if ($auth->role() === ROLE_VILLAGE_INCHARGE) {
+            // User's available float for disbursement
             $stmtBal = $pdo->prepare("SELECT balance FROM users WHERE id=?");
             $stmtBal->execute([$auth->id()]);
             $myBalance = (float)$stmtBal->fetchColumn();
@@ -99,6 +117,7 @@ class DashboardController
                 $myVillageAuthorized = (float)$stmtAuth->fetchColumn();
             }
 
+            // Direct payment assignments
             $stmtInst = $pdo->prepare("
                 SELECT d.*, ap.full_name as applicant_name, v.name as village_name
                 FROM disbursements d

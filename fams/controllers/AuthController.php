@@ -1,19 +1,24 @@
 <?php
+/**
+ * Auth Controller
+ * 
+ * Manages the user authentication lifecycle.
+ * Handles credential verification, role-based entry point redirection, 
+ * and secure session termination.
+ */
 class AuthController
 {
+    /**
+     * Handles user login.
+     * Validates credentials against the database and establishes a session.
+     * Redirects to the appropriate dashboard based on user privileges.
+     * 
+     * @param PDO $pdo
+     * @param Auth $auth
+     * @param Logger $logger
+     */
     public static function login(PDO $pdo, Auth $auth, Logger $logger): void
     {
-        // DISABLED: Automatic redirect from login page can cause loops if session is unstable
-        /*
-        if ($auth->isLoggedIn()) {
-            if ($auth->hasRole([ROLE_SYSADMIN, ROLE_OVERALL_INCHARGE])) {
-                redirect('index.php?page=dashboard');
-            } else {
-                redirect('index.php?page=applications');
-            }
-        }
-        */
-
         $error = '';
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             csrf_verify();
@@ -23,7 +28,7 @@ class AuthController
             if ($auth->login($username, $password)) {
                 $logger->activity($auth->id(), 'login', 'user', $auth->id());
                 
-                // Redirect based on role
+                // Management users go to Dashboard; Field staff go to Applications list
                 if ($auth->hasRole([ROLE_SYSADMIN, ROLE_OVERALL_INCHARGE])) {
                     redirect('index.php?page=dashboard');
                 } else {
@@ -36,6 +41,13 @@ class AuthController
         require __DIR__ . '/../views/auth/login.php';
     }
 
+    /**
+     * Terminates the user session and clears authentication cookies.
+     * 
+     * @param PDO $pdo
+     * @param Auth $auth
+     * @param Logger $logger
+     */
     public static function logout(PDO $pdo, Auth $auth, Logger $logger): void
     {
         if ($auth->isLoggedIn()) {

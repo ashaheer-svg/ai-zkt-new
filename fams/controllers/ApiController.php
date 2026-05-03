@@ -1,6 +1,22 @@
 <?php
+/**
+ * Api Controller
+ * 
+ * Provides a RESTful interface for the mobile application.
+ * Handles token-based authentication, project synchronization, and field
+ * document/photo uploads.
+ */
 class ApiController
 {
+    /**
+     * Internal authentication helper.
+     * Extracts Bearer token from Authorization header and validates against api_tokens table.
+     * Exits with 401 JSON response on failure.
+     * 
+     * @param PDO $pdo The database connection instance.
+     * @param Auth $auth The authentication service for token validation.
+     * @return void
+     */
     private static function authenticate(PDO $pdo, Auth $auth): void
     {
         $headers = getallheaders();
@@ -18,6 +34,13 @@ class ApiController
         }
     }
 
+    /**
+     * Returns list of active document types for mobile UI selection.
+     * 
+     * @param PDO $pdo The database connection instance.
+     * @param Auth $auth The authentication service.
+     * @return void
+     */
     public static function documentTypes(PDO $pdo, Auth $auth): void
     {
         self::authenticate($pdo, $auth);
@@ -26,11 +49,18 @@ class ApiController
         echo json_encode($stmt->fetchAll());
     }
 
+    /**
+     * Lists applications (projects) visible to the authenticated user.
+     * Respects geographic scoping (village-level access).
+     * 
+     * @param PDO $pdo The database connection instance.
+     * @param Auth $auth The authentication service.
+     * @return void
+     */
     public static function projects(PDO $pdo, Auth $auth): void
     {
         self::authenticate($pdo, $auth);
         
-        // Use existing scoping logic via Auth which is now populated via token
         $villages = $auth->myVillages();
         $where = ["1=1"];
         $params = [];
@@ -39,7 +69,7 @@ class ApiController
             $where[] = "ap.village_id IN (" . implode(',', array_fill(0, count($villages), '?')) . ")";
             $params = array_merge($params, $villages);
         } elseif (!$auth->hasRole([ROLE_OVERALL_INCHARGE, ROLE_SYSADMIN])) {
-            // No villages and not admin = nothing
+            // No villages assigned and not a management user
             header('Content-Type: application/json');
             echo json_encode([]);
             exit;
@@ -60,6 +90,15 @@ class ApiController
         echo json_encode($stmt->fetchAll());
     }
 
+    /**
+     * Handles field document uploads from the mobile app.
+     * Validates file presence, application ownership/access, and metadata.
+     * 
+     * @param PDO $pdo The database connection instance.
+     * @param Auth $auth The authentication service.
+     * @param Logger $logger The activity logging service.
+     * @return void
+     */
     public static function upload(PDO $pdo, Auth $auth, Logger $logger): void
     {
         self::authenticate($pdo, $auth);
@@ -75,7 +114,7 @@ class ApiController
             exit;
         }
 
-        // Verify access to this application
+        // Verify access to this application before accepting payload
         $stmt = $pdo->prepare("SELECT a.*, ap.village_id FROM applications a JOIN applicants ap ON ap.id = a.applicant_id WHERE a.id = ?");
         $stmt->execute([$appId]);
         $app = $stmt->fetch();
@@ -92,13 +131,10 @@ class ApiController
         }
 
         $upload = new Upload($pdo, $auth->id());
-        // We modify storeMultiple to accept type and lang? 
-        // Better: use a modified version of upload logic here
-        
         $result = $upload->storeMultiple($_FILES, $appId, $desc);
         
         if ($result['stored'] > 0) {
-            // Update the last inserted document with type and lang
+            // Enrich document metadata (specifically for mobile uploads)
             $pdo->prepare("UPDATE application_documents SET doc_type = ?, doc_language = ? WHERE id = (SELECT MAX(id) FROM application_documents WHERE uploaded_by = ?)")
                 ->execute([$docType, $lang, $auth->id()]);
 

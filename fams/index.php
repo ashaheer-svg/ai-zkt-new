@@ -1,4 +1,19 @@
 <?php
+/**
+ * Application Entry Point (Front Controller)
+ * 
+ * This file bootstraps the Zakath Financial Management System.
+ * Tasks performed:
+ * 1. Session initialization with isolated storage.
+ * 2. Dependency loading (Config, Helpers, Core Services).
+ * 3. Database connection and environment configuration (Timezone, Debug).
+ * 4. Authentication state check and routing logic.
+ * 5. Direct file streaming (for document security).
+ * 6. Centralized Dispatching via PHP match expression.
+ * 
+ * @version 1.0.3-SECURE
+ * @package NCT-Zakat
+ */
 declare(strict_types=1);
 
 $sessPath = __DIR__ . '/sessions';
@@ -11,6 +26,7 @@ if (empty($_SESSION['session_test'])) {
     $_SESSION['session_test'] = time();
 }
 
+// ── 1. Load Core Components ──────────────────────────────────────────────────
 require_once __DIR__ . '/config/app.php';
 require_once __DIR__ . '/config/database.php';
 require_once __DIR__ . '/src/helpers.php';
@@ -18,6 +34,7 @@ require_once __DIR__ . '/src/Auth.php';
 require_once __DIR__ . '/src/Logger.php';
 require_once __DIR__ . '/src/Upload.php';
 
+// ── 2. Load Action Controllers ───────────────────────────────────────────────
 require_once __DIR__ . '/controllers/AuthController.php';
 require_once __DIR__ . '/controllers/DashboardController.php';
 require_once __DIR__ . '/controllers/ApplicationController.php';
@@ -28,7 +45,8 @@ require_once __DIR__ . '/controllers/ApiController.php';
 
 $pdo = getDB();
 
-// ── Bootstrap Settings ────────────────────────────────────────────────────────
+// ── 3. Bootstrap Settings ────────────────────────────────────────────────────
+// Load dynamic settings from the database (managed via AdminController::settings)
 $sysSettings = $pdo->query("SELECT * FROM settings")->fetchAll(PDO::FETCH_KEY_PAIR);
 $isDebug     = ($sysSettings['debug_mode'] ?? '0') === '1';
 $timezone    = $sysSettings['timezone'] ?? 'Asia/Colombo';
@@ -37,49 +55,56 @@ error_reporting($isDebug ? E_ALL : 0);
 ini_set('display_errors', $isDebug ? '1' : '0');
 date_default_timezone_set($timezone);
 
+// Global Service Instantiation
 $auth   = new Auth($pdo);
 $logger = new Logger($pdo);
 
+// ── 4. Routing Determination ──────────────────────────────────────────────────
 $page   = $_GET['page']   ?? '';
 if ($page === '') {
     if (!$auth->isLoggedIn()) {
         $page = 'login';
     } else {
+        // Management users default to dashboard; others to application list
         $page = $auth->hasRole([ROLE_SYSADMIN, ROLE_OVERALL_INCHARGE, ROLE_VILLAGE_INCHARGE]) ? 'dashboard' : 'applications';
     }
 }
 
-// ── File download — no layout needed ─────────────────────────────────────────
+// ── 5. Protected Document Streaming ─────────────────────────────────────────
+// Documents are stored outside web-root or in protected folders.
+// This route acts as a proxy to stream files while enforcing RBAC.
 if ($page === 'doc.download') {
     $auth->requireLogin();
     $docId  = (int)($_GET['id'] ?? 0);
     $upload = new Upload($pdo, $auth->id());
     $doc    = $upload->getById($docId);
     if (!$doc) { http_response_code(404); die('Not found.'); }
-    // Gate: user must be able to view the parent application
+    
+    // Authorization Check: Does the user have access to the parent application?
     $appStmt = $pdo->prepare('SELECT a.*, ap.village_id FROM applications a JOIN applicants ap ON ap.id = a.applicant_id WHERE a.id = ?');
     $appStmt->execute([$doc['application_id']]);
     $app = $appStmt->fetch();
     if (!$app || !$auth->canViewApplication($app)) { http_response_code(403); die('Access denied.'); }
+    
     $logger->activity($auth->id(), 'download_document', 'application_document', $docId);
     $upload->stream($docId);
 }
 
-// ── Auth gate ─────────────────────────────────────────────────────────────────
+// ── 6. Authentication Gate ────────────────────────────────────────────────────
 if (!$auth->isLoggedIn() && $page !== 'login') {
     redirect('index.php?page=login');
 }
 
-// ── Route ─────────────────────────────────────────────────────────────────────
+// ── 7. Route Dispatcher ───────────────────────────────────────────────────────
 match (true) {
-    // Auth
+    // Authentication Endpoints
     $page === 'login'  => AuthController::login($pdo, $auth, $logger),
     $page === 'logout' => AuthController::logout($pdo, $auth, $logger),
 
-    // Dashboard
+    // Dashboard Overview
     $page === 'dashboard' => DashboardController::overview($pdo, $auth, $logger),
 
-    // Applications
+    // Application Lifecycle (Draft -> Pending -> Validated -> Approved -> Disbursing)
     $page === 'applications'           => ApplicationController::list($pdo, $auth, $logger),
     $page === 'applications.create'    => ApplicationController::create($pdo, $auth, $logger),
     $page === 'applications.edit'      => ApplicationController::edit($pdo, $auth, $logger),
@@ -98,7 +123,7 @@ match (true) {
     $page === 'applications.upload'    => ApplicationController::uploadDoc($pdo, $auth, $logger),
     $page === 'applications.deldoc'    => ApplicationController::deleteDoc($pdo, $auth, $logger),
 
-    // Disbursements
+    // Financial Disbursement & Authorization (Role 1.c -> 1.b)
     $page === 'disbursements'                 => DisbursementController::list($pdo, $auth, $logger),
     $page === 'disbursements.pending_release' => DisbursementController::pendingRelease($pdo, $auth, $logger),
     $page === 'disbursements.schedule'        => DisbursementController::schedule($pdo, $auth, $logger),
@@ -106,11 +131,11 @@ match (true) {
     $page === 'disbursements.bulk_authorize' => DisbursementController::bulkAuthorize($pdo, $auth, $logger),
     $page === 'disbursements.release'        => DisbursementController::release($pdo, $auth, $logger),
 
-    // Cash Management
+    // Virtual Wallet & Inter-user Cash Transfers
     $page === 'cash.transfers' => CashController::index($pdo, $auth, $logger),
     $page === 'cash.transfer'  => CashController::transfer($pdo, $auth, $logger),
 
-    // Admin
+    // System Administration (Sysadmin Only)
     $page === 'admin.users'      => AdminController::users($pdo, $auth, $logger),
     $page === 'admin.villages'   => AdminController::villages($pdo, $auth, $logger),
     $page === 'admin.categories' => AdminController::categories($pdo, $auth, $logger),
@@ -123,13 +148,12 @@ match (true) {
     $page === 'admin.reset'      => AdminController::resetDB($pdo, $auth, $logger),
     $page === 'admin.doc_types'  => AdminController::doc_types($pdo, $auth, $logger),
 
-    // API (Mobile)
+    // Mobile API Endpoints (Token Authenticated)
     $page === 'api.projects'       => ApiController::projects($pdo, $auth),
     $page === 'api.document-types' => ApiController::documentTypes($pdo, $auth),
     $page === 'api.upload'         => ApiController::upload($pdo, $auth, $logger),
 
-
-    // Fallback
+    // 404 Handler
     default => (function() {
         http_response_code(404);
         echo '<h1>404 — Page not found</h1>';
