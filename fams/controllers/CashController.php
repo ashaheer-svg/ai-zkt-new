@@ -8,6 +8,10 @@ class CashController
         $where = [];
         $params = [];
         
+        // Default date range: last 1 month
+        $startDate = $_GET['start_date'] ?? date('Y-m-d', strtotime('-1 month'));
+        $endDate   = $_GET['end_date']   ?? date('Y-m-d');
+
         if (!empty($_GET['from'])) {
             $where[] = "ct.from_user_id = ?";
             $params[] = $_GET['from'];
@@ -16,10 +20,10 @@ class CashController
             $where[] = "ct.to_user_id = ?";
             $params[] = $_GET['to'];
         }
-        if (!empty($_GET['date'])) {
-            $where[] = "DATE(ct.created_at) = ?";
-            $params[] = $_GET['date'];
-        }
+        
+        $where[] = "DATE(ct.created_at) BETWEEN ? AND ?";
+        $params[] = $startDate;
+        $params[] = $endDate;
 
         $sql = "SELECT ct.*, f.full_name as from_name, t.full_name as to_name 
                 FROM cash_transfers ct 

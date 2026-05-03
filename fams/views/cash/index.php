@@ -64,8 +64,12 @@
         <form method="GET" action="index.php" class="filter-row-compact">
             <input type="hidden" name="page" value="cash.transfers">
             <div class="filter-group">
-                <label>Date</label>
-                <input type="date" name="date" value="<?= e($_GET['date'] ?? '') ?>" style="max-width: 160px;">
+                <label>From Date</label>
+                <input type="date" name="start_date" value="<?= e($startDate) ?>" style="max-width: 150px;">
+            </div>
+            <div class="filter-group">
+                <label>To Date</label>
+                <input type="date" name="end_date" value="<?= e($endDate) ?>" style="max-width: 150px;">
             </div>
             <div class="filter-group">
                 <label>From</label>
@@ -87,7 +91,7 @@
             </div>
             <div class="filter-actions">
                 <button type="submit" class="btn btn-outline">🔍 Filter</button>
-                <?php if (!empty($_GET['date']) || !empty($_GET['from']) || !empty($_GET['to'])): ?>
+                <?php if (!empty($_GET['start_date']) || !empty($_GET['end_date']) || !empty($_GET['from']) || !empty($_GET['to'])): ?>
                     <a href="index.php?page=cash.transfers" class="btn btn-outline" title="Clear Filters">✕</a>
                 <?php endif; ?>
             </div>
