@@ -61,8 +61,10 @@ class AdminController
         $search = trim($_GET['search'] ?? '');
         $params = $search ? ["%$search%","%$search%"] : [];
         $where  = $search ? "WHERE username LIKE ? OR full_name LIKE ?" : "";
-        $users  = $pdo->prepare("SELECT * FROM users $where ORDER BY role,full_name");
-        $users->execute($params); $users = $users->fetchAll();
+        $page = max(1, (int)($_GET['p'] ?? 1));
+        $result = paginate($pdo, "SELECT * FROM users $where ORDER BY role,full_name", $params, $page);
+        $users = $result['rows'];
+        $pagination = $result;
 
         // Load village assignments
         $uvStmt = $pdo->query("SELECT uv.user_id, v.name FROM user_villages uv JOIN villages v ON v.id=uv.village_id");
@@ -98,7 +100,11 @@ class AdminController
             }
         }
 
-        $villages = $pdo->query("SELECT v.*,COUNT(ap.id) AS applicant_count FROM villages v LEFT JOIN applicants ap ON ap.village_id=v.id GROUP BY v.id ORDER BY v.name")->fetchAll();
+        $page = max(1, (int)($_GET['p'] ?? 1));
+        $sql = "SELECT v.*,COUNT(ap.id) AS applicant_count FROM villages v LEFT JOIN applicants ap ON ap.village_id=v.id GROUP BY v.id ORDER BY v.name";
+        $result = paginate($pdo, $sql, [], $page);
+        $villages = $result['rows'];
+        $pagination = $result;
         $pageTitle = 'Village Management'; $activePage = 'admin.villages';
         require __DIR__ . '/../views/admin/villages.php';
     }
@@ -127,7 +133,11 @@ class AdminController
             }
         }
 
-        $categories = $pdo->query("SELECT fc.*,COUNT(a.id) AS usage_count FROM fund_categories fc LEFT JOIN applications a ON a.fund_category_id=fc.id GROUP BY fc.id ORDER BY fc.name")->fetchAll();
+        $page = max(1, (int)($_GET['p'] ?? 1));
+        $sql = "SELECT fc.*,COUNT(a.id) AS usage_count FROM fund_categories fc LEFT JOIN applications a ON a.fund_category_id=fc.id GROUP BY fc.id ORDER BY fc.name";
+        $result = paginate($pdo, $sql, [], $page);
+        $categories = $result['rows'];
+        $pagination = $result;
         $pageTitle = 'Fund Categories'; $activePage = 'admin.categories';
         require __DIR__ . '/../views/admin/categories.php';
     }
@@ -189,7 +199,10 @@ class AdminController
                 WHERE v.is_active = 1
                 ORDER BY v.name ASC";
         
-        $villages = $pdo->query($sql)->fetchAll();
+        $page = max(1, (int)($_GET['p'] ?? 1));
+        $result = paginate($pdo, $sql, [], $page);
+        $villages = $result['rows'];
+        $pagination = $result;
 
         $pageTitle = 'Project Allocations'; 
         $activePage = 'admin.allocations';
@@ -214,20 +227,6 @@ class AdminController
                 flash('success', 'General settings updated.');
             }
 
-            if ($action === 'doc_type_add') {
-                $name = trim($_POST['name'] ?? '');
-                if ($name) {
-                    $pdo->prepare("INSERT OR IGNORE INTO document_types (name) VALUES (?)")->execute([$name]);
-                    flash('success', 'Document type added.');
-                }
-            }
-
-            if ($action === 'doc_type_toggle') {
-                $id = (int)$_POST['id'];
-                $pdo->prepare("UPDATE document_types SET is_active = CASE WHEN is_active=1 THEN 0 ELSE 1 END WHERE id=?")->execute([$id]);
-                flash('success', 'Document type status updated.');
-            }
-
             if ($action === 'generate_token') {
                 $uid = (int)$_POST['user_id'];
                 $token = bin2hex(random_bytes(32));
@@ -246,7 +245,6 @@ class AdminController
 
         $settings = $pdo->query("SELECT * FROM settings")->fetchAll(PDO::FETCH_KEY_PAIR);
         $timezones = DateTimeZone::listIdentifiers();
-        $docTypes = $pdo->query("SELECT * FROM document_types ORDER BY name")->fetchAll();
         $users = $pdo->query("SELECT id, username, full_name, role FROM users WHERE is_active=1 ORDER BY full_name")->fetchAll();
         
         // Fetch current tokens for display
@@ -254,6 +252,37 @@ class AdminController
 
         $pageTitle = 'System Settings'; $activePage = 'admin.settings';
         require __DIR__ . '/../views/admin/settings.php';
+    }
+
+    public static function doc_types(PDO $pdo, Auth $auth, Logger $logger): void
+    {
+        $auth->requireRole(ROLE_SYSADMIN);
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            csrf_verify();
+            $action = $_GET['action'] ?? '';
+
+            if ($action === 'add') {
+                $name = trim($_POST['name'] ?? '');
+                if ($name) {
+                    $pdo->prepare("INSERT OR IGNORE INTO document_types (name) VALUES (?)")->execute([$name]);
+                    flash('success', 'Document type added.');
+                }
+            }
+
+            if ($action === 'toggle') {
+                $id = (int)$_POST['id'];
+                $pdo->prepare("UPDATE document_types SET is_active = CASE WHEN is_active=1 THEN 0 ELSE 1 END WHERE id=?")->execute([$id]);
+                flash('success', 'Document type status updated.');
+            }
+
+            redirect('index.php?page=admin.doc_types');
+        }
+
+        $docTypes = $pdo->query("SELECT * FROM document_types ORDER BY name")->fetchAll();
+        
+        $pageTitle = 'Document Types'; $activePage = 'admin.doc_types';
+        require __DIR__ . '/../views/admin/doc_types.php';
     }
 
     public static function system(PDO $pdo, Auth $auth, Logger $logger): void

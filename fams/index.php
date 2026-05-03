@@ -120,6 +120,7 @@ match (true) {
     $page === 'admin.db_backup'  => AdminController::db_backup($pdo, $auth, $logger),
     $page === 'admin.full_backup' => AdminController::fullBackup($pdo, $auth, $logger),
     $page === 'admin.reset'      => AdminController::resetDB($pdo, $auth, $logger),
+    $page === 'admin.doc_types'  => AdminController::doc_types($pdo, $auth, $logger),
 
     // API (Mobile)
     $page === 'api.projects'       => ApiController::projects($pdo, $auth),

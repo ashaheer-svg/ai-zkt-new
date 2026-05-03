@@ -40,34 +40,11 @@
     </div>
   </form>
 
-  <!-- Document Types -->
+  <!-- Document Types Link -->
   <div class="card">
     <div class="card-title">📄 Document Types</div>
-    <form method="POST" action="index.php?page=admin.settings&sub_action=doc_type_add" class="d-flex gap-1 mb-2">
-      <?= csrf_field() ?>
-      <input type="text" name="name" placeholder="New Type (e.g. ID Copy)" required class="form-control">
-      <button type="submit" class="btn btn-success">Add</button>
-    </form>
-    
-    <div class="table-wrap">
-      <table class="table-card">
-        <thead><tr><th>Type Name</th><th>Status</th><th>Action</th></tr></thead>
-        <tbody>
-          <?php foreach ($docTypes as $dt): ?>
-          <tr>
-            <td><?= e($dt['name']) ?></td>
-            <td><?= $dt['is_active'] ? '<span class="badge badge-success">Active</span>' : '<span class="badge badge-danger">Inactive</span>' ?></td>
-            <td>
-              <form method="POST" action="index.php?page=admin.settings&sub_action=doc_type_toggle" style="display:inline">
-                <?= csrf_field() ?><input type="hidden" name="id" value="<?= $dt['id'] ?>">
-                <button type="submit" class="btn btn-outline btn-xs"><?= $dt['is_active']?'Deactivate':'Activate' ?></button>
-              </form>
-            </td>
-          </tr>
-          <?php endforeach; ?>
-        </tbody>
-      </table>
-    </div>
+    <p class="text-small muted mb-2">Manage categories for photos and documents uploaded via mobile.</p>
+    <a href="index.php?page=admin.doc_types" class="btn btn-outline btn-block">Manage Document Types</a>
   </div>
 </div>
 

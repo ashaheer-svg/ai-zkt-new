@@ -94,6 +94,16 @@
   </div>
 </div>
 
+<!-- Pagination -->
+<?php if ($pagination['pages'] > 1): ?>
+<div class="pagination">
+  <?php for ($i = 1; $i <= $pagination['pages']; $i++): ?>
+  <a href="?page=admin.allocations&p=<?= $i ?>"
+     class="page-btn <?= $i === $pagination['page'] ? 'active' : '' ?>"><?= $i ?></a>
+  <?php endfor; ?>
+</div>
+<?php endif; ?>
+
 <style>
 .input-group { display: flex; gap: 4px; }
 .input-group input { padding: 4px 8px; font-size: 14px; border: 1px solid #ddd; border-radius: 4px; }

@@ -40,4 +40,14 @@ if ($action==='edit' && isset($_GET['id'])) { $s=$pdo->prepare("SELECT * FROM fu
     <?php endforeach; ?>
   </tbody>
 </table></div></div>
+
+<!-- Pagination -->
+<?php if ($pagination['pages'] > 1): ?>
+<div class="pagination">
+  <?php for ($i = 1; $i <= $pagination['pages']; $i++): ?>
+  <a href="?page=admin.categories&p=<?= $i ?>"
+     class="page-btn <?= $i === $pagination['page'] ? 'active' : '' ?>"><?= $i ?></a>
+  <?php endfor; ?>
+</div>
+<?php endif; ?>
 <?php require __DIR__ . '/../layout/footer.php'; ?>

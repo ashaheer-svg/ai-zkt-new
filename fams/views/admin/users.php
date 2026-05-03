@@ -95,6 +95,15 @@ if ($action === 'edit' && isset($_GET['uid'])) {
     </table>
   </div>
 </div>
+<!-- Pagination -->
+<?php if ($pagination['pages'] > 1): ?>
+<div class="pagination">
+  <?php for ($i = 1; $i <= $pagination['pages']; $i++): ?>
+  <a href="?page=admin.users&p=<?= $i ?>&search=<?= urlencode($_GET['search']??'') ?>"
+     class="page-btn <?= $i === $pagination['page'] ? 'active' : '' ?>"><?= $i ?></a>
+  <?php endfor; ?>
+</div>
+<?php endif; ?>
 
 <script>
 // Hide village field for global roles
