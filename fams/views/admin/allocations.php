@@ -114,28 +114,32 @@
 <div id="tab-users" class="tab-pane">
   <div class="card" style="padding:0">
     <div class="table-wrap">
-      <table class="table-card">
+      <table class="table-card table-narrow-numeric">
         <thead>
           <tr>
-            <th>User / Role</th>
+            <th style="width: 35%;">User / Role</th>
             <th>Cash Received</th>
             <th>Cash Disbursed</th>
             <th>Pending Release</th>
             <th>Current Balance</th>
-            <th>Utilization</th>
+            <th style="width: 120px;">Utilization</th>
           </tr>
         </thead>
         <tbody>
-          <?php foreach ($userFunds as $uf): 
-            $received = (float)$uf['total_received'];
-            $paid     = (float)$uf['total_disbursed'];
-            $pending  = (float)$uf['total_pending_release'];
-            $balance  = (float)$uf['balance'];
-            
-            $uPercent = $received > 0 ? ($paid / $received) * 100 : 0;
-            $uColor = 'green';
-            if ($uPercent > 80) $uColor = 'orange';
-            if ($uPercent > 95) $uColor = 'red';
+          <?php 
+            $sumReceived = 0; $sumPaid = 0; $sumPending = 0; $sumBalance = 0;
+            foreach ($userFunds as $uf): 
+              $received = (float)$uf['total_received'];
+              $paid     = (float)$uf['total_disbursed'];
+              $pending  = (float)$uf['total_pending_release'];
+              $balance  = (float)$uf['balance'];
+              
+              $sumReceived += $received; $sumPaid += $paid; $sumPending += $pending; $sumBalance += $balance;
+
+              $uPercent = $received > 0 ? ($paid / $received) * 100 : 0;
+              $uColor = 'green';
+              if ($uPercent > 80) $uColor = 'orange';
+              if ($uPercent > 95) $uColor = 'red';
           ?>
           <tr>
             <td data-label="User / Role">
@@ -162,6 +166,19 @@
           </tr>
           <?php endforeach; ?>
         </tbody>
+        <tfoot>
+          <tr style="background: rgba(0,0,0,0.02); font-weight: bold;">
+            <td>TOTAL</td>
+            <td><?= money($sumReceived) ?></td>
+            <td class="text-green"><?= money($sumPaid) ?></td>
+            <td class="text-orange"><?= money($sumPending) ?></td>
+            <td><?= money($sumBalance) ?></td>
+            <td>
+              <?php $totalPercent = $sumReceived > 0 ? ($sumPaid / $sumReceived) * 100 : 0; ?>
+              <?= round($totalPercent, 1) ?>%
+            </td>
+          </tr>
+        </tfoot>
       </table>
     </div>
   </div>
@@ -181,7 +198,9 @@
         <tbody>
           <?php 
             $currentManager = '';
+            $sumTransferred = 0;
             foreach ($staffTransfers as $st): 
+              $sumTransferred += (float)$st['total_amount'];
           ?>
           <tr>
             <td data-label="From">
@@ -197,6 +216,12 @@
           </tr>
           <?php endforeach; ?>
         </tbody>
+        <tfoot>
+          <tr style="background: rgba(0,0,0,0.02); font-weight: bold;">
+            <td colspan="2">TOTAL DISTRIBUTED</td>
+            <td class="text-right"><?= money($sumTransferred) ?></td>
+          </tr>
+        </tfoot>
       </table>
     </div>
   </div>
@@ -228,6 +253,12 @@ document.querySelectorAll('.tab-item').forEach(item => {
 .text-green { color: var(--green); }
 .text-orange { color: var(--orange); }
 .text-red { color: var(--red); }
+
+.table-narrow-numeric td:not(:first-child):not(:last-child),
+.table-narrow-numeric th:not(:first-child):not(:last-child) {
+  width: 1%;
+  white-space: nowrap;
+}
 </style>
 
 <?php require __DIR__ . '/../layout/footer.php'; ?>

@@ -265,7 +265,7 @@ class AdminController
                 (SELECT COALESCE(SUM(ct.amount), 0) FROM cash_transfers ct WHERE ct.from_user_id = u.id) as total_transferred_out,
                 (SELECT COALESCE(SUM(d.amount), 0) FROM disbursements d WHERE d.paid_by = u.id AND d.status = 'released') as total_disbursed,
                 (SELECT COALESCE(SUM(d.amount), 0) FROM disbursements d WHERE d.assigned_to = u.id AND d.status = 'authorized') as total_pending_release,
-                (SELECT GROUP_CONCAT(v.name, ', ') FROM user_villages uv JOIN villages v ON v.id = uv.village_id WHERE uv.user_id = u.id) as assigned_villages
+                (SELECT GROUP_CONCAT(v.name || ' (' || COALESCE(v.district, '—') || ')', ', ') FROM user_villages uv JOIN villages v ON v.id = uv.village_id WHERE uv.user_id = u.id) as assigned_villages
             FROM users u
             WHERE u.role IN (?, ?) AND u.is_active = 1
             ORDER BY u.role DESC, u.full_name ASC
