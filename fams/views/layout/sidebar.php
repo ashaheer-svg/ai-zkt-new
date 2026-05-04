@@ -98,6 +98,9 @@ if ($role === ROLE_SYSADMIN) {
   <main class="main-content" id="mainContent">
     <div class="page-header">
       <h1 class="page-title"><?= e($pageTitle ?? '') ?></h1>
+      <div class="header-logo">
+        <img src="assets/img/logo.png" alt="NCT Logo" onerror="this.style.display='none'">
+      </div>
     </div>
     <div class="flash-messages">
       <?= flash_html() ?>
