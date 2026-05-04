@@ -39,8 +39,8 @@
     <table class="table-card">
       <thead>
         <tr>
-          <th>#</th><th>Applicant</th><th>Village</th><th>Category</th>
-          <th class="text-right">Amount</th><th>Status</th><th>Created By</th><th>Date</th><th>Action</th>
+          <th>#</th><th style="width: 30%;">Applicant</th><th>Village</th><th>Category</th>
+          <th class="text-right">Amount</th><th>Status</th><th>Created By</th><th style="width: 80px;">Date</th><th>Action</th>
         </tr>
       </thead>
       <tbody>
@@ -67,7 +67,7 @@
           </td>
           <td data-label="Status"><?= status_badge($a['status']) ?></td>
           <td data-label="Created By" class="muted"><?= e($a['creator_name']) ?></td>
-          <td data-label="Date" class="muted"><?= fdate($a['created_at']) ?></td>
+          <td data-label="Date" class="muted"><?= fdate($a['created_at'], 'M/y') ?></td>
           <td data-label="Action">
             <a href="index.php?page=applications.view&id=<?= $a['id'] ?>" class="btn btn-outline btn-sm">View</a>
           </td>
