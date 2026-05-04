@@ -224,7 +224,8 @@ img { max-width:100%; }
   content:''; position:absolute; top:0; left:0; right:0; height:3px;
   background:linear-gradient(90deg,var(--primary),var(--accent));
 }
-.stat-card:hover { border-color:var(--border-light); transform:translateY(-2px); box-shadow:var(--shadow); }
+.stat-card-compact.border-success { border-left-color: var(--success); }
+.stat-card-compact.border-warning { border-left-color: var(--warning); }
 .stat-label { font-size:.78rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:.05em; }
 .stat-value { font-size:1.8rem; font-weight:700; color:var(--text); margin:.25rem 0; }
 .stat-sub   { font-size:.78rem; color:var(--text-dim); }
@@ -557,6 +558,7 @@ textarea { resize:vertical; min-height:90px; }
 .text-muted  { color:var(--text-muted); }
 .text-danger { color:var(--danger); }
 .text-success{ color:var(--success); }
+.text-warning{ color:var(--warning); }
 .text-small  { font-size:.8rem; }
 .text-tiny   { font-size:.7rem; }
 .muted       { color:var(--text-muted); opacity:0.8; }

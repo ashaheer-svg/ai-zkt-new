@@ -50,13 +50,13 @@
     <div class="stat-label-sm">Scheduled</div>
     <div class="stat-value-sm"><?= money($stats['total_scheduled'] ?? 0) ?></div>
   </div>
-  <div class="card stat-card-compact border-green">
+  <div class="card stat-card-compact border-success">
     <div class="stat-label-sm">Released</div>
-    <div class="stat-value-sm text-green"><?= money($stats['total_released'] ?? 0) ?></div>
+    <div class="stat-value-sm text-success"><?= money($stats['total_released'] ?? 0) ?></div>
   </div>
-  <div class="card stat-card-compact border-orange">
+  <div class="card stat-card-compact border-warning">
     <div class="stat-label-sm">Pending</div>
-    <div class="stat-value-sm text-orange"><?= money(($stats['total_scheduled'] ?? 0) - ($stats['total_released'] ?? 0)) ?></div>
+    <div class="stat-value-sm text-warning"><?= money(($stats['total_scheduled'] ?? 0) - ($stats['total_released'] ?? 0)) ?></div>
   </div>
 </div>
 

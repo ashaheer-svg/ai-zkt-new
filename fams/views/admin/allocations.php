@@ -19,13 +19,13 @@
       <table class="table-card">
         <thead>
           <tr>
-            <th>Village</th>
-            <th class="text-right">Total Allocation</th>
-            <th class="text-right">Released</th>
-            <th class="text-right">Committed</th>
-            <th class="text-right">Total Utilization</th>
-            <th class="text-right">Balance</th>
-            <th style="width: 250px;">Update Limit</th>
+            <th style="width: 40%;">Village</th>
+            <th class="text-right" style="width: 10%;">Allocation</th>
+            <th class="text-right" style="width: 10%;">Released</th>
+            <th class="text-right" style="width: 10%;">Committed</th>
+            <th class="text-right" style="width: 15%;">Utilization</th>
+            <th class="text-right" style="width: 10%;">Balance</th>
+            <th style="width: 5%;">Update</th>
           </tr>
         </thead>
         <tbody>
@@ -58,10 +58,10 @@
               <span class="text-large"><?= money($allocated) ?></span>
             </td>
             <td data-label="Released" class="text-right">
-              <span class="text-green"><?= money($released) ?></span>
+              <span class="text-success"><?= money($released) ?></span>
             </td>
             <td data-label="Committed" class="text-right">
-              <span class="text-orange"><?= money($committed) ?></span>
+              <span class="text-warning"><?= money($committed) ?></span>
             </td>
             <td data-label="Total Utilization" class="text-right">
               <span class="text-<?= $color ?>"><strong><?= money($used) ?></strong></span>
@@ -137,9 +137,9 @@
               $sumReceived += $received; $sumPaid += $paid; $sumPending += $pending; $sumBalance += $balance;
 
               $uPercent = $received > 0 ? ($paid / $received) * 100 : 0;
-              $uColor = 'green';
-              if ($uPercent > 80) $uColor = 'orange';
-              if ($uPercent > 95) $uColor = 'red';
+              $uColor = 'success';
+              if ($uPercent > 80) $uColor = 'warning';
+              if ($uPercent > 95) $uColor = 'danger';
           ?>
           <tr>
             <td data-label="User / Role">
@@ -149,10 +149,10 @@
             </td>
             <td data-label="Cash Received" class="text-right"><?= money($received) ?></td>
             <td data-label="Cash Disbursed" class="text-right">
-              <span class="text-green"><?= money($paid) ?></span>
+              <span class="text-success"><?= money($paid) ?></span>
             </td>
             <td data-label="Pending Release" class="text-right">
-              <span class="text-orange"><?= money($pending) ?></span>
+              <span class="text-warning"><?= money($pending) ?></span>
             </td>
             <td data-label="Current Balance" class="text-right">
               <strong><?= money($balance) ?></strong>
@@ -170,8 +170,8 @@
           <tr style="background: rgba(0,0,0,0.02); font-weight: bold;">
             <td>TOTAL</td>
             <td class="text-right"><?= money($sumReceived) ?></td>
-            <td class="text-right text-green"><?= money($sumPaid) ?></td>
-            <td class="text-right text-orange"><?= money($sumPending) ?></td>
+            <td class="text-right text-success"><?= money($sumPaid) ?></td>
+            <td class="text-right text-warning"><?= money($sumPending) ?></td>
             <td class="text-right"><?= money($sumBalance) ?></td>
             <td class="text-right">
               <?php $totalPercent = $sumReceived > 0 ? ($sumPaid / $sumReceived) * 100 : 0; ?>
