@@ -53,7 +53,18 @@
           <td data-label="Applicant"><strong><?= e($a['applicant_name']) ?></strong><br><span class="text-small text-muted"><?= e($a['id_number'] ?? '') ?></span></td>
           <td data-label="Village"><?= e($a['village_name']) ?><br><span class="text-tiny muted"><?= e($a['village_district'] ?: '') ?></span></td>
           <td data-label="Category"><?= e($a['category_name']) ?></td>
-          <td data-label="Amount"><?= money($a['amount_requested']) ?></td>
+          <td data-label="Amount">
+            <?php 
+              $totalApproved = ($a['disbursement_amount'] ?? 0) * ($a['disbursement_count'] ?? 0);
+              $showApproved = in_array($a['status'], [STATUS_APPROVED, 'disbursing', STATUS_ON_HOLD]) && $totalApproved > 0;
+            ?>
+            <?php if ($showApproved): ?>
+              <div class="text-tiny muted" style="margin-bottom:2px">Req: <?= money($a['amount_requested']) ?></div>
+              <strong><?= money($totalApproved) ?></strong>
+            <?php else: ?>
+              <?= money($a['amount_requested']) ?>
+            <?php endif; ?>
+          </td>
           <td data-label="Status"><?= status_badge($a['status']) ?></td>
           <td data-label="Created By" class="muted"><?= e($a['creator_name']) ?></td>
           <td data-label="Date" class="muted"><?= fdate($a['created_at']) ?></td>

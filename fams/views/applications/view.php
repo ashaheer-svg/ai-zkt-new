@@ -236,6 +236,12 @@
       <div class="detail-item"><div class="detail-label">Installment Amount</div><div class="detail-value"><?= money($app['requested_installment'] ?? $app['amount_requested']) ?></div></div>
       <div class="detail-item"><div class="detail-label">Quantity</div><div class="detail-value"><?= $app['requested_count'] ?? 1 ?></div></div>
       <div class="detail-item"><div class="detail-label">Total Amount Requested</div><div class="detail-value"><strong><?= money($app['amount_requested']) ?></strong></div></div>
+      <?php if ($app['disbursement_amount'] > 0): ?>
+      <div class="detail-item">
+        <div class="detail-label">Total Approved Amount</div>
+        <div class="detail-value"><strong style="color:var(--success-color)"><?= money($app['disbursement_amount'] * $app['disbursement_count']) ?></strong></div>
+      </div>
+      <?php endif; ?>
       <div class="detail-item"><div class="detail-label">Other Fund Applications</div><div class="detail-value"><?= ucfirst(e($app['applied_other_funds'] ?: 'no')) ?></div></div>
       <div class="detail-item"><div class="detail-label">Expected Date</div><div class="detail-value"><?= fdate($app['expected_date']) ?></div></div>
       <div class="detail-item full"><div class="detail-label">Reason for Application</div><div class="detail-value" style="white-space:pre-wrap"><?= e($app['reason_for_application'] ?: '—') ?></div></div>
