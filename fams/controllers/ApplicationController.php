@@ -79,6 +79,7 @@ class ApplicationController
         $result = paginate($pdo, $sql, $params, $page);
 
         $pageTitle  = 'Projects';
+        $pageDescription = 'Comprehensive list of all financial assistance projects. Use filters to search by applicant, village, or status to track the progress of ongoing applications.';
         $activePage = 'applications';
         require __DIR__ . '/../views/applications/list.php';
     }
@@ -444,7 +445,9 @@ class ApplicationController
         
         $page   = max(1,(int)($_GET['p']??1));
         $result = paginate($pdo, $sql, $params, $page);
-        $pageTitle = 'Pending Validation'; $activePage = 'pending';
+        $pageTitle = 'Pending Validation';
+        $pageDescription = 'Action center for Level 1.b and 1.c users. Review and validate new applications submitted by field staff to ensure data accuracy and eligibility before final approval.';
+        $activePage = 'pending';
         require __DIR__ . '/../views/applications/pending.php';
     }
 

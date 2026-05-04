@@ -92,7 +92,9 @@ class AdminController
             $uvMap[$row['user_id']][] = $row['name'] . $thackiya; 
         }
 
-        $pageTitle = 'User Management'; $activePage = 'admin.users';
+        $pageTitle = 'User Management';
+        $pageDescription = 'Administrative control panel for system users. Manage roles, access levels (1.a - 1.d), and village-level scoping for all personnel.';
+        $activePage = 'admin.users';
         require __DIR__ . '/../views/admin/users.php';
     }
 
@@ -133,7 +135,9 @@ class AdminController
         $result = paginate($pdo, $sql, [], $page);
         $villages = $result['rows'];
         $pagination = $result;
-        $pageTitle = 'Village Management'; $activePage = 'admin.villages';
+        $pageTitle = 'Village Management';
+        $pageDescription = 'Configure the system\'s geographic scope. Define districts and thackiyas to enable location-based reporting and staff assignments.';
+        $activePage = 'admin.villages';
         require __DIR__ . '/../views/admin/villages.php';
     }
 
@@ -172,7 +176,9 @@ class AdminController
         $result = paginate($pdo, $sql, [], $page);
         $categories = $result['rows'];
         $pagination = $result;
-        $pageTitle = 'Fund Categories'; $activePage = 'admin.categories';
+        $pageTitle = 'Fund Categories';
+        $pageDescription = 'Manage the types of assistance programs offered by the trust. Define categories such as Medical, Educational, or Emergency relief to categorize projects.';
+        $activePage = 'admin.categories';
         require __DIR__ . '/../views/admin/categories.php';
     }
 
@@ -202,7 +208,9 @@ class AdminController
         $page   = max(1,(int)($_GET['p']??1));
         $result = paginate($pdo,$sql,$params,$page);
 
-        $pageTitle = 'Audit Log'; $activePage = 'admin.audit';
+        $pageTitle = 'Audit Log';
+        $pageDescription = 'Track all system activities and administrative changes for transparency and accountability.';
+        $activePage = 'admin.audit';
         require __DIR__ . '/../views/admin/audit_log.php';
     }
 
@@ -289,6 +297,7 @@ class AdminController
         $staffTransfers = $pdo->query($transferSql)->fetchAll();
 
         $pageTitle = 'Project Allocations'; 
+        $pageDescription = 'Strategic view of fund distribution across villages and staff. Monitor individual staff float balances and analyze project-level budget allocations.';
         $activePage = 'admin.allocations';
         require __DIR__ . '/../views/admin/allocations.php';
     }
@@ -340,7 +349,9 @@ class AdminController
         $users = $pdo->query("SELECT id, username, full_name, role FROM users WHERE is_active=1 ORDER BY full_name")->fetchAll();
         $tokens = $pdo->query("SELECT t.*, u.full_name FROM api_tokens t JOIN users u ON u.id = t.user_id")->fetchAll();
 
-        $pageTitle = 'System Settings'; $activePage = 'admin.settings';
+        $pageTitle = 'System Settings';
+        $pageDescription = 'Configure system behavior, API access tokens, and debugging modes.';
+        $activePage = 'admin.settings';
         require __DIR__ . '/../views/admin/settings.php';
     }
 
@@ -379,7 +390,9 @@ class AdminController
 
         $docTypes = $pdo->query("SELECT * FROM document_types ORDER BY name")->fetchAll();
         
-        $pageTitle = 'Document Types'; $activePage = 'admin.doc_types';
+        $pageTitle = 'Document Types';
+        $pageDescription = 'Define the required verification documents for project applications.';
+        $activePage = 'admin.doc_types';
         require __DIR__ . '/../views/admin/doc_types.php';
     }
 
@@ -415,7 +428,9 @@ class AdminController
             'os' => PHP_OS,
         ];
 
-        $pageTitle = 'Administration'; $activePage = 'admin.system';
+        $pageTitle = 'Administration';
+        $pageDescription = 'Critical system tools for database maintenance, backups, and global configuration resets.';
+        $activePage = 'admin.system';
         require __DIR__ . '/../views/admin/system.php';
     }
 
@@ -580,6 +595,7 @@ class AdminController
         }
 
         $pageTitle = 'Village Staffing Roster';
+        $pageDescription = 'Operational roster mapping field personnel to specific villages. Identify staffing gaps and ensure all geographic units have assigned validation and data entry staff.';
         $activePage = 'admin.village_staffing';
         require __DIR__ . '/../views/admin/village_staffing.php';
     }

@@ -100,6 +100,9 @@ if ($role === ROLE_SYSADMIN) {
   <main class="main-content" id="mainContent">
     <div class="page-header">
       <h1 class="page-title"><?= e($pageTitle ?? '') ?></h1>
+      <?php if (!empty($pageDescription)): ?>
+        <div class="page-description"><?= e($pageDescription) ?></div>
+      <?php endif; ?>
     </div>
     <div class="flash-messages">
       <?= flash_html() ?>

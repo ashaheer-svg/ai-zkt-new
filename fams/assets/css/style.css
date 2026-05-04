@@ -189,7 +189,14 @@ img { max-width:100%; }
 }
 .page-title {
   font-size:1.4rem; font-weight:700;
-  color:var(--text); padding-bottom:1rem;
+  color:var(--text); padding-bottom:0.5rem;
+}
+.page-description {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  padding-bottom: 1.25rem;
+  max-width: 800px;
+  line-height: 1.5;
 }
 .flash-messages { padding:0 2rem; margin-top:1rem; }
 .content-area   { padding:1.5rem 2rem 2rem; flex:1; }
@@ -306,7 +313,7 @@ td.muted { color:var(--text-muted); font-size:.82rem; }
 
 /* ── Buttons ────────────────────────────────────────────────────────────────── */
 .btn {
-  display:inline-flex; align-items:center; gap:.4rem;
+  display:inline-flex; align-items:center; justify-content:center; gap:.4rem;
   padding:.55rem 1.1rem; border-radius:var(--radius);
   font-size:.875rem; font-weight:500; cursor:pointer;
   border:1px solid transparent; transition:var(--trans); line-height:1;

@@ -81,6 +81,7 @@ class CashController
         $userSummary = $stmtSummary->fetchAll();
 
         $pageTitle = 'Cash Transfer Management';
+        $pageDescription = 'Internal fund management for Level 1.c administrators. Securely transfer physical cash balances to Level 1.b Village In-Charges for field-level disbursement.';
         $activePage = 'cash.transfers';
         require __DIR__ . '/../views/cash/index.php';
     }

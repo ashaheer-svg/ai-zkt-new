@@ -199,6 +199,7 @@ class DisbursementController
         }
 
         $pageTitle = $appId ? 'Disbursements — App #'.$appId : ($_GET['status'] === DISB_AUTHORIZED ? 'Pending Payments' : 'All Disbursements');
+        $pageDescription = 'Financial oversight module for managing payment installments. Authorize scheduled payments, track historical releases, and monitor total fund utilization.';
         $activePage = ($_GET['status'] === DISB_AUTHORIZED && $auth->role() === ROLE_VILLAGE_INCHARGE) ? 'disbursements.pending_release' : 'disbursements';
         require __DIR__ . '/../views/disbursements/list.php';
     }
