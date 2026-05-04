@@ -59,8 +59,8 @@
               $showApproved = in_array($a['status'], [STATUS_APPROVED, 'disbursing', STATUS_ON_HOLD]) && $totalApproved > 0;
             ?>
             <?php if ($showApproved): ?>
-              <div class="text-tiny muted" style="margin-bottom:2px">Req: <?= money($a['amount_requested']) ?></div>
               <strong><?= money($totalApproved) ?></strong>
+              <div class="text-tiny muted" style="margin-top:2px">Req: <?= money($a['amount_requested']) ?></div>
             <?php else: ?>
               <?= money($a['amount_requested']) ?>
             <?php endif; ?>
