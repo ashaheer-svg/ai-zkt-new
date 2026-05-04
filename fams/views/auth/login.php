@@ -38,7 +38,9 @@
           <input type="password" id="password" name="password" required
                  autocomplete="current-password" placeholder="Enter your password">
         </div>
-        <button type="submit" class="btn btn-primary w-100 mt-1">Sign In</button>
+        <div style="text-align: center;">
+          <button type="submit" class="btn btn-primary mt-1" style="width: 140px;">Sign In</button>
+        </div>
       </form>
 
       <div class="mt-2" style="text-align:center; font-size: 11px;">
