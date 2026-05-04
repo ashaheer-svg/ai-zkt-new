@@ -4,6 +4,7 @@
 <!-- Status banner -->
 <div class="d-flex align-center gap-2 mb-2" style="flex-wrap:wrap">
   <?= status_badge($app['status']) ?>
+  <span class="badge badge-outline"><?= e($app['category_name'] ?? 'Uncategorized') ?></span>
   <?php if ($app['is_privileged']): ?><span class="privilege-tag">🔒 Privileged</span><?php endif; ?>
   <span class="text-small text-muted">Created <?= fdate($app['created_at']) ?></span>
   <span class="text-small text-muted">Updated <?= fdate($app['updated_at']) ?></span>
