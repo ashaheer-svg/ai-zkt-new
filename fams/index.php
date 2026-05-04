@@ -138,6 +138,7 @@ match (true) {
     // System Administration (Sysadmin Only)
     $page === 'admin.users'      => AdminController::users($pdo, $auth, $logger),
     $page === 'admin.villages'   => AdminController::villages($pdo, $auth, $logger),
+    $page === 'admin.village_staffing' => AdminController::villageStaffing($pdo, $auth, $logger),
     $page === 'admin.categories' => AdminController::categories($pdo, $auth, $logger),
     $page === 'admin.audit'      => AdminController::audit($pdo, $auth, $logger),
     $page === 'admin.allocations' => AdminController::allocations($pdo, $auth, $logger),

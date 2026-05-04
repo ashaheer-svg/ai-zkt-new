@@ -538,4 +538,49 @@ class AdminController
         readfile($dbPath);
         exit;
     }
+
+    /**
+     * Village Staffing Roster
+     * Displays all villages and the assigned field staff (1.a and 1.b).
+     * Highlights villages with no assigned staff.
+     */
+    public static function villageStaffing(PDO $pdo, Auth $auth, Logger $logger): void
+    {
+        $auth->requireRole([ROLE_OVERALL_INCHARGE, ROLE_SYSADMIN]);
+
+        $sql = "
+            SELECT v.id as village_id, v.name as village_name, v.district,
+                   u.id as user_id, u.full_name, u.role
+            FROM villages v
+            LEFT JOIN user_villages uv ON v.id = uv.village_id
+            LEFT JOIN users u ON uv.user_id = u.id AND u.role IN ('" . ROLE_DATA_ENTRY . "', '" . ROLE_VILLAGE_INCHARGE . "')
+            WHERE v.is_active = 1
+            ORDER BY v.district ASC, v.name ASC, u.role ASC
+        ";
+        
+        $rows = $pdo->query($sql)->fetchAll();
+        
+        $villages = [];
+        foreach ($rows as $row) {
+            $vid = $row['village_id'];
+            if (!isset($villages[$vid])) {
+                $villages[$vid] = [
+                    'id' => $vid,
+                    'name' => $row['village_name'],
+                    'district' => $row['district'],
+                    'staff' => []
+                ];
+            }
+            if ($row['user_id']) {
+                $villages[$vid]['staff'][] = [
+                    'name' => $row['full_name'],
+                    'role' => $row['role']
+                ];
+            }
+        }
+
+        $pageTitle = 'Village Staffing Roster';
+        $activePage = 'admin.village_staffing';
+        require __DIR__ . '/../views/admin/village_staffing.php';
+    }
 }

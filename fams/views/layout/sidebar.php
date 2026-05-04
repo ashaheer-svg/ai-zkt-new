@@ -28,6 +28,7 @@ if (in_array($role,[ROLE_OVERALL_INCHARGE,ROLE_SYSADMIN])) {
     $nav[] = ['page'=>'disbursements',     'icon'=>'🏦','label'=>'Disbursements'];
     $nav[] = ['page'=>'cash.transfers',     'icon'=>'💸','label'=>'Cash Transfers'];
     $nav[] = ['page'=>'admin.allocations', 'icon'=>'💰','label'=>'Allocations'];
+    $nav[] = ['page'=>'admin.village_staffing', 'icon'=>'🏘️','label'=>'Village Staffing'];
 }
 
 // Admin
