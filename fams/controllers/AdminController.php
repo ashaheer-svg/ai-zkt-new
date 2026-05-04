@@ -254,6 +254,24 @@ class AdminController
         $villages = $result['rows'];
         $pagination = $result;
 
+        // User Fund Summary (For 1.c and 1.b)
+        $userFundSql = "
+            SELECT 
+                u.id, 
+                u.full_name, 
+                u.role, 
+                u.balance,
+                (SELECT COALESCE(SUM(ct.amount), 0) FROM cash_transfers ct WHERE ct.to_user_id = u.id) as total_received,
+                (SELECT COALESCE(SUM(ct.amount), 0) FROM cash_transfers ct WHERE ct.from_user_id = u.id) as total_transferred_out,
+                (SELECT COALESCE(SUM(d.amount), 0) FROM disbursements d WHERE d.paid_by = u.id AND d.status = 'released') as total_disbursed
+            FROM users u
+            WHERE u.role IN (?, ?) AND u.is_active = 1
+            ORDER BY u.role DESC, u.full_name ASC
+        ";
+        $userSummaryStmt = $pdo->prepare($userFundSql);
+        $userSummaryStmt->execute([ROLE_VILLAGE_INCHARGE, ROLE_OVERALL_INCHARGE]);
+        $userFunds = $userSummaryStmt->fetchAll();
+
         $pageTitle = 'Project Allocations'; 
         $activePage = 'admin.allocations';
         require __DIR__ . '/../views/admin/allocations.php';
