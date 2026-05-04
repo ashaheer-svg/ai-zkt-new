@@ -464,6 +464,13 @@ textarea { resize:vertical; min-height:90px; }
 .login-logo {
   text-align:center; margin-bottom:2rem;
 }
+.brand-logo-large img {
+  width: 100px; height: 100px;
+  object-fit: contain; background: #fff;
+  border-radius: 16px; padding: 8px;
+  margin-bottom: 1.25rem;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+}
 .login-logo-icon {
   width:56px; height:56px; border-radius:16px;
   background:linear-gradient(135deg,var(--primary),var(--accent));

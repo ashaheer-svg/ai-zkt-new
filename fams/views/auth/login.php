@@ -13,7 +13,9 @@
   <div class="login-box">
     <div class="login-card">
       <div class="login-logo">
-        <div class="login-logo-icon">F</div>
+        <div class="brand-logo-large">
+          <img src="assets/img/logo.png" alt="Logo" onerror="this.parentElement.innerHTML='<div class=\'login-logo-icon\'>F</div>'">
+        </div>
         <h1><?= APP_SHORT ?></h1>
         <p><?= APP_NAME ?></p>
         <p style="font-size: 10px; color: #999;">Deployment: <?= APP_DEPLOY_VERSION ?></p>
