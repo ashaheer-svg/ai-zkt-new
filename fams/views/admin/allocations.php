@@ -121,7 +121,6 @@
             <th>Cash Received</th>
             <th>Cash Disbursed</th>
             <th>Pending Release</th>
-            <th>Transferred Out</th>
             <th>Current Balance</th>
             <th>Utilization</th>
           </tr>
@@ -131,11 +130,9 @@
             $received = (float)$uf['total_received'];
             $paid     = (float)$uf['total_disbursed'];
             $pending  = (float)$uf['total_pending_release'];
-            $out      = (float)$uf['total_transferred_out'];
-            $used     = $paid + $out;
             $balance  = (float)$uf['balance'];
             
-            $uPercent = $received > 0 ? ($used / $received) * 100 : 0;
+            $uPercent = $received > 0 ? ($paid / $received) * 100 : 0;
             $uColor = 'green';
             if ($uPercent > 80) $uColor = 'orange';
             if ($uPercent > 95) $uColor = 'red';
@@ -143,7 +140,7 @@
           <tr>
             <td data-label="User / Role">
               <strong><?= e($uf['full_name']) ?></strong><br>
-              <small class="muted" style="font-size: 0.8em;"><?= e($uf['assigned_villages'] ?: 'No Villages') ?></small><br>
+              <small class="muted" style="font-size: 0.85em; display: block; line-height: 1.2; margin-bottom: 4px;"><?= e($uf['assigned_villages'] ?: 'No Villages') ?></small>
               <small class="badge badge-outline"><?= role_label($uf['role']) ?></small>
             </td>
             <td data-label="Cash Received"><?= money($received) ?></td>
@@ -153,8 +150,6 @@
             <td data-label="Pending Release">
               <span class="text-orange"><?= money($pending) ?></span>
             </td>
-            <td data-label="Transferred Out"><?= money($out) ?></td>
-
             <td data-label="Current Balance">
               <strong><?= money($balance) ?></strong>
             </td>
@@ -170,6 +165,42 @@
       </table>
     </div>
   </div>
+
+  <?php if ($staffTransfers): ?>
+  <div class="card mt-2">
+    <div class="card-title">📉 Staff Float Distribution (Level 1.c → 1.b)</div>
+    <div class="table-wrap">
+      <table class="table-card">
+        <thead>
+          <tr>
+            <th>From (Manager)</th>
+            <th>To (Field Staff)</th>
+            <th class="text-right">Total Transferred</th>
+          </tr>
+        </thead>
+        <tbody>
+          <?php 
+            $currentManager = '';
+            foreach ($staffTransfers as $st): 
+          ?>
+          <tr>
+            <td data-label="From">
+              <?php if ($st['from_name'] !== $currentManager): ?>
+                <strong><?= e($st['from_name']) ?></strong>
+                <?php $currentManager = $st['from_name']; ?>
+              <?php else: ?>
+                <span class="muted" style="padding-left: 10px;">↳</span>
+              <?php endif; ?>
+            </td>
+            <td data-label="To"><?= e($st['to_name']) ?></td>
+            <td data-label="Amount" class="text-right"><strong><?= money($st['total_amount']) ?></strong></td>
+          </tr>
+          <?php endforeach; ?>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <?php endif; ?>
 </div>
 
 <script>

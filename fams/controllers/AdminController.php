@@ -274,6 +274,20 @@ class AdminController
         $userSummaryStmt->execute([ROLE_VILLAGE_INCHARGE, ROLE_OVERALL_INCHARGE]);
         $userFunds = $userSummaryStmt->fetchAll();
 
+        // Staff Transfer Breakdown (1.c to 1.b)
+        $transferSql = "
+            SELECT 
+                f.full_name as from_name,
+                t.full_name as to_name,
+                SUM(ct.amount) as total_amount
+            FROM cash_transfers ct
+            JOIN users f ON f.id = ct.from_user_id
+            JOIN users t ON t.id = ct.to_user_id
+            GROUP BY ct.from_user_id, ct.to_user_id
+            ORDER BY f.full_name ASC, total_amount DESC
+        ";
+        $staffTransfers = $pdo->query($transferSql)->fetchAll();
+
         $pageTitle = 'Project Allocations'; 
         $activePage = 'admin.allocations';
         require __DIR__ . '/../views/admin/allocations.php';

@@ -125,8 +125,12 @@ class CashController
                 $stmt->execute([$auth->id(), $toUserId, $amount, $reference]);
 
                 // Increment target user's virtual balance
-                $stmt = $pdo->prepare("UPDATE users SET balance = balance + ? WHERE id = ?");
-                $stmt->execute([$amount, $toUserId]);
+                $pdo->prepare("UPDATE users SET balance = balance + ? WHERE id = ?")->execute([$amount, $toUserId]);
+
+                // Decrement sender's balance (unless Sysadmin who is the source)
+                if (!$auth->hasRole(ROLE_SYSADMIN)) {
+                    $pdo->prepare("UPDATE users SET balance = balance - ? WHERE id = ?")->execute([$amount, $auth->id()]);
+                }
 
                 $logger->activity($auth->id(), 'cash_transfer', 'user', $toUserId);
                 $pdo->commit();
