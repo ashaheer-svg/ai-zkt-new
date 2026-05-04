@@ -205,7 +205,13 @@
       <div class="detail-item"><div class="detail-label">Occupation</div><div class="detail-value"><?= e($applicant['occupation'] ?: '—') ?></div></div>
       <div class="detail-item"><div class="detail-label">Employer Details</div><div class="detail-value"><?= e($applicant['employer_details'] ?: '—') ?></div></div>
       <div class="detail-item full"><div class="detail-label">Address</div><div class="detail-value"><?= e($applicant['address'] ?: '—') ?></div></div>
-      <?php if ($applicant['notes']): ?><div class="detail-item full"><div class="detail-label">Internal Notes</div><div class="detail-value"><?= e($applicant['notes']) ?></div></div><?php endif; ?>
+      <?php if ($applicant['notes']): ?>
+      <div class="detail-item full">
+        <div class="detail-label">Internal Notes</div>
+        <div class="detail-value"><?= e($applicant['notes']) ?></div>
+        <div class="text-tiny muted mt-1">Recorded by <?= e($app['creator_name'] ?? 'System') ?></div>
+      </div>
+      <?php endif; ?>
     </div>
   </div>
 
@@ -238,7 +244,11 @@
       <div class="detail-item"><div class="detail-label">Total Amount Requested</div><div class="detail-value"><strong><?= money($app['amount_requested']) ?></strong></div></div>
       <div class="detail-item"><div class="detail-label">Expected Date</div><div class="detail-value"><?= fdate($app['expected_date']) ?></div></div>
       <div class="detail-item"><div class="detail-label">Other Fund Applications</div><div class="detail-value"><?= ucfirst(e($app['applied_other_funds'] ?: 'no')) ?></div></div>
-      <div class="detail-item full"><div class="detail-label">Reason for Application</div><div class="detail-value" style="white-space:pre-wrap"><?= e($app['reason_for_application'] ?: '—') ?></div></div>
+      <div class="detail-item full">
+        <div class="detail-label">Reason for Application</div>
+        <div class="detail-value" style="white-space:pre-wrap"><?= e($app['reason_for_application'] ?: '—') ?></div>
+        <div class="text-tiny muted mt-1">Submitted by <?= e($app['creator_name'] ?? 'System') ?> on <?= fdate($app['created_at']) ?></div>
+      </div>
     </div>
   </div>
 

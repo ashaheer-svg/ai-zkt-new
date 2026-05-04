@@ -932,10 +932,13 @@ class ApplicationController
     private static function _loadApp(PDO $pdo, int $id): ?array
     {
         $stmt = $pdo->prepare("
-            SELECT a.*, ap.village_id, v.name as village_name, v.district as village_district
+            SELECT a.*, ap.village_id, v.name as village_name, v.district as village_district,
+                   u.full_name as creator_name, fc.name as category_name
             FROM applications a
             JOIN applicants ap ON ap.id = a.applicant_id
             JOIN villages v ON v.id = ap.village_id
+            LEFT JOIN users u ON u.id = a.created_by
+            LEFT JOIN fund_categories fc ON fc.id = a.fund_category_id
             WHERE a.id = ?
         ");
         $stmt->execute([$id]);
