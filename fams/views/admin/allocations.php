@@ -120,6 +120,7 @@
             <th>User / Role</th>
             <th>Cash Received</th>
             <th>Cash Disbursed</th>
+            <th>Pending Release</th>
             <th>Transferred Out</th>
             <th>Current Balance</th>
             <th>Utilization</th>
@@ -129,6 +130,7 @@
           <?php foreach ($userFunds as $uf): 
             $received = (float)$uf['total_received'];
             $paid     = (float)$uf['total_disbursed'];
+            $pending  = (float)$uf['total_pending_release'];
             $out      = (float)$uf['total_transferred_out'];
             $used     = $paid + $out;
             $balance  = (float)$uf['balance'];
@@ -141,13 +143,18 @@
           <tr>
             <td data-label="User / Role">
               <strong><?= e($uf['full_name']) ?></strong><br>
+              <small class="muted" style="font-size: 0.8em;"><?= e($uf['assigned_villages'] ?: 'No Villages') ?></small><br>
               <small class="badge badge-outline"><?= role_label($uf['role']) ?></small>
             </td>
             <td data-label="Cash Received"><?= money($received) ?></td>
             <td data-label="Cash Disbursed">
               <span class="text-green"><?= money($paid) ?></span>
             </td>
+            <td data-label="Pending Release">
+              <span class="text-orange"><?= money($pending) ?></span>
+            </td>
             <td data-label="Transferred Out"><?= money($out) ?></td>
+
             <td data-label="Current Balance">
               <strong><?= money($balance) ?></strong>
             </td>
