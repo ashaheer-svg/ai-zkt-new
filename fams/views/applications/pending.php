@@ -6,7 +6,7 @@
 <div class="card" style="padding:0">
   <div class="table-wrap">
     <table class="table-card">
-      <thead><tr><th>#</th><th>Applicant</th><th>Village</th><th>Category</th><th>Amount</th><th>Submitted By</th><th>Date</th><th>Action</th></tr></thead>
+      <thead><tr><th>#</th><th>Applicant</th><th>Village</th><th>Category</th><th class="text-right">Amount</th><th>Submitted By</th><th>Date</th><th>Action</th></tr></thead>
       <tbody>
         <?php if (empty($result['rows'])): ?>
         <tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:2rem">No applications pending validation.</td></tr>
@@ -17,7 +17,7 @@
           <td data-label="Applicant"><strong><?= e($a['applicant_name']) ?></strong></td>
           <td data-label="Village"><?= e($a['village_name']) ?></td>
           <td data-label="Category"><?= e($a['category_name']) ?></td>
-          <td data-label="Amount"><?= money($a['amount_requested']) ?></td>
+          <td data-label="Amount" class="text-right"><?= money($a['amount_requested']) ?></td>
           <td data-label="Submitted By" class="muted"><?= e($a['creator_name']) ?></td>
           <td data-label="Date" class="muted"><?= fdate($a['created_at']) ?></td>
           <td data-label="Action">

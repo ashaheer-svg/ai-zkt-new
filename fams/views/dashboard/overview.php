@@ -34,7 +34,7 @@
         <table class="table-card">
             <thead>
                 <tr>
-                    <th>Applicant</th><th>Village</th><th>Installment</th><th>Amount</th><th>Due Date</th><th>Action</th>
+                    <th>Applicant</th><th>Village</th><th>Installment</th><th class="text-right">Amount</th><th>Due Date</th><th>Action</th>
                 </tr>
             </thead>
             <tbody>
@@ -43,7 +43,7 @@
                     <td data-label="Applicant"><?= e($inst['applicant_name']) ?></td>
                     <td data-label="Village"><?= e($inst['village_name']) ?></td>
                     <td data-label="Installment">#<?= $inst['installment_no'] ?></td>
-                    <td data-label="Amount"><strong><?= money($inst['amount']) ?></strong></td>
+                    <td data-label="Amount" class="text-right"><strong><?= money($inst['amount']) ?></strong></td>
                     <td data-label="Due"><?= fdate($inst['due_date']) ?></td>
                     <td data-label="Action">
                         <a href="index.php?page=disbursements.release&id=<?= $inst['id'] ?>" class="btn btn-success btn-sm">Mark as Paid</a>
@@ -135,7 +135,7 @@
       <thead>
         <tr>
           <th>Applicant</th><th>Village</th><th>Category</th>
-          <th>Installment</th><th>Due Date</th><th>Amount</th><th>Action</th>
+          <th>Installment</th><th>Due Date</th><th class="text-right">Amount</th><th>Action</th>
         </tr>
       </thead>
       <tbody>
@@ -146,7 +146,7 @@
           <td data-label="Category"><?= e($d['category_name']) ?></td>
           <td data-label="Installment">#<?= $d['installment_no'] ?></td>
           <td data-label="Due Date"><?= $d['due_date'] ? fdate($d['due_date']) : '—' ?></td>
-          <td data-label="Amount"><strong><?= money($d['amount']) ?></strong></td>
+          <td data-label="Amount" class="text-right"><strong><?= money($d['amount']) ?></strong></td>
           <td data-label="Action">
             <a href="index.php?page=disbursements.authorize&id=<?= $d['id'] ?>" class="btn btn-warning btn-sm">Authorize</a>
           </td>
@@ -165,14 +165,14 @@
   <div class="card-title">🏘️ Village Summary</div>
   <div class="table-wrap">
     <table class="table-card">
-      <thead><tr><th>Village</th><th>Total Apps</th><th>Approved</th><th>Disbursed</th></tr></thead>
+      <thead><tr><th>Village</th><th class="text-right">Total Apps</th><th class="text-right">Approved</th><th class="text-right">Disbursed</th></tr></thead>
       <tbody>
         <?php foreach ($villageSummary as $v): ?>
         <tr>
           <td data-label="Village"><?= e($v['village']) ?></td>
-          <td data-label="Total"><?= $v['total'] ?></td>
-          <td data-label="Approved"><?= $v['approved'] ?></td>
-          <td data-label="Disbursed"><strong><?= money($v['disbursed']) ?></strong></td>
+          <td data-label="Total" class="text-right"><?= $v['total'] ?></td>
+          <td data-label="Approved" class="text-right"><?= $v['approved'] ?></td>
+          <td data-label="Disbursed" class="text-right"><strong><?= money($v['disbursed']) ?></strong></td>
         </tr>
         <?php endforeach; ?>
       </tbody>

@@ -143,7 +143,7 @@ window.onclick = function(event) {
         <th><?= sort_link('Village', 'village_name') ?></th>
         <?php endif; ?>
         <th><?= sort_link('Due Date', 'due_date') ?></th>
-        <th><?= sort_link('Amount', 'amount') ?></th>
+        <th class="text-right"><?= sort_link('Amount', 'amount') ?></th>
         <th><?= sort_link('Status', 'status') ?></th>
         <th>Assigned To</th>
         <th>Auth By</th>
@@ -169,7 +169,7 @@ window.onclick = function(event) {
           <td data-label="Village"><?= e($d['village_name']) ?><br><span class="text-tiny muted"><?= e($d['village_district'] ?: '') ?></span></td>
           <?php endif; ?>
           <td data-label="Due"><?= $d['due_date'] ? fdate($d['due_date']) : '—' ?></td>
-          <td data-label="Amount"><strong><?= money($d['amount']) ?></strong></td>
+          <td data-label="Amount" class="text-right"><strong><?= money($d['amount']) ?></strong></td>
           <td data-label="Status"><?= disb_badge($d['status']) ?></td>
           <td data-label="Assigned" class="muted">
             <?= e($d['assigned_name'] ?? '—') ?>

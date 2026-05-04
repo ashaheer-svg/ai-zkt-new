@@ -20,11 +20,11 @@
         <thead>
           <tr>
             <th>Village</th>
-            <th>Total Allocation</th>
-            <th>Released</th>
-            <th>Committed</th>
-            <th>Total Utilization</th>
-            <th>Balance</th>
+            <th class="text-right">Total Allocation</th>
+            <th class="text-right">Released</th>
+            <th class="text-right">Committed</th>
+            <th class="text-right">Total Utilization</th>
+            <th class="text-right">Balance</th>
             <th style="width: 250px;">Update Limit</th>
           </tr>
         </thead>
@@ -54,22 +54,22 @@
               <strong><?= e($v['name']) ?></strong><br>
               <small class="muted"><?= e($v['district']) ?></small>
             </td>
-            <td data-label="Total Allocation">
+            <td data-label="Total Allocation" class="text-right">
               <span class="text-large"><?= money($allocated) ?></span>
             </td>
-            <td data-label="Released">
+            <td data-label="Released" class="text-right">
               <span class="text-green"><?= money($released) ?></span>
             </td>
-            <td data-label="Committed">
+            <td data-label="Committed" class="text-right">
               <span class="text-orange"><?= money($committed) ?></span>
             </td>
-            <td data-label="Total Utilization">
+            <td data-label="Total Utilization" class="text-right">
               <span class="text-<?= $color ?>"><strong><?= money($used) ?></strong></span>
-              <div style="width: 100px; height: 4px; background: #eee; border-radius: 2px; margin-top: 4px;">
+              <div style="width: 100px; height: 4px; background: #eee; border-radius: 2px; margin-top: 4px; margin-left: auto;">
                 <div style="width: <?= min(100, $percent) ?>%; height: 100%; background: var(--<?= $color ?>); border-radius: 2px;"></div>
               </div>
             </td>
-            <td data-label="Balance">
+            <td data-label="Balance" class="text-right">
               <strong class="<?= $remaining < 0 ? 'text-red' : '' ?>"><?= money($remaining) ?></strong>
             </td>
             <td data-label="Update Limit">
@@ -88,11 +88,11 @@
         <tfoot>
           <tr style="background: rgba(0,0,0,0.02); font-weight: bold;">
             <td>TOTAL</td>
-            <td><?= money($totalAllocated) ?></td>
-            <td><?= money($totalReleased) ?></td>
-            <td><?= money($totalCommitted) ?></td>
-            <td><?= money($totalReleased + $totalCommitted) ?></td>
-            <td><?= money($totalAllocated - ($totalReleased + $totalCommitted)) ?></td>
+            <td class="text-right"><?= money($totalAllocated) ?></td>
+            <td class="text-right"><?= money($totalReleased) ?></td>
+            <td class="text-right"><?= money($totalCommitted) ?></td>
+            <td class="text-right"><?= money($totalReleased + $totalCommitted) ?></td>
+            <td class="text-right"><?= money($totalAllocated - ($totalReleased + $totalCommitted)) ?></td>
             <td></td>
           </tr>
         </tfoot>
@@ -118,11 +118,11 @@
         <thead>
           <tr>
             <th style="width: 35%;">User / Role</th>
-            <th>Cash Received</th>
-            <th>Cash Disbursed</th>
-            <th>Pending Release</th>
-            <th>Current Balance</th>
-            <th style="width: 120px;">Utilization</th>
+            <th class="text-right">Cash Received</th>
+            <th class="text-right">Cash Disbursed</th>
+            <th class="text-right">Pending Release</th>
+            <th class="text-right">Current Balance</th>
+            <th style="width: 120px;" class="text-right">Utilization</th>
           </tr>
         </thead>
         <tbody>
@@ -147,19 +147,19 @@
               <small class="muted" style="font-size: 0.85em; display: block; line-height: 1.2; margin-bottom: 4px;"><?= e($uf['assigned_villages'] ?: 'No Villages') ?></small>
               <small class="badge badge-outline"><?= role_label($uf['role']) ?></small>
             </td>
-            <td data-label="Cash Received"><?= money($received) ?></td>
-            <td data-label="Cash Disbursed">
+            <td data-label="Cash Received" class="text-right"><?= money($received) ?></td>
+            <td data-label="Cash Disbursed" class="text-right">
               <span class="text-green"><?= money($paid) ?></span>
             </td>
-            <td data-label="Pending Release">
+            <td data-label="Pending Release" class="text-right">
               <span class="text-orange"><?= money($pending) ?></span>
             </td>
-            <td data-label="Current Balance">
+            <td data-label="Current Balance" class="text-right">
               <strong><?= money($balance) ?></strong>
             </td>
-            <td data-label="Utilization">
+            <td data-label="Utilization" class="text-right">
               <span class="text-<?= $uColor ?>"><strong><?= round($uPercent, 1) ?>%</strong></span>
-              <div style="width: 100px; height: 4px; background: #eee; border-radius: 2px; margin-top: 4px;">
+              <div style="width: 100px; height: 4px; background: #eee; border-radius: 2px; margin-top: 4px; margin-left: auto;">
                 <div style="width: <?= min(100, $uPercent) ?>%; height: 100%; background: var(--<?= $uColor ?>); border-radius: 2px;"></div>
               </div>
             </td>
@@ -169,11 +169,11 @@
         <tfoot>
           <tr style="background: rgba(0,0,0,0.02); font-weight: bold;">
             <td>TOTAL</td>
-            <td><?= money($sumReceived) ?></td>
-            <td class="text-green"><?= money($sumPaid) ?></td>
-            <td class="text-orange"><?= money($sumPending) ?></td>
-            <td><?= money($sumBalance) ?></td>
-            <td>
+            <td class="text-right"><?= money($sumReceived) ?></td>
+            <td class="text-right text-green"><?= money($sumPaid) ?></td>
+            <td class="text-right text-orange"><?= money($sumPending) ?></td>
+            <td class="text-right"><?= money($sumBalance) ?></td>
+            <td class="text-right">
               <?php $totalPercent = $sumReceived > 0 ? ($sumPaid / $sumReceived) * 100 : 0; ?>
               <?= round($totalPercent, 1) ?>%
             </td>

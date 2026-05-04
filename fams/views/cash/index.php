@@ -9,10 +9,10 @@
                 <thead>
                     <tr>
                         <th>Village In-Charge</th>
-                        <th>Cash in Hand<br><small class="text-muted">(Balance)</small></th>
-                        <th>Awaiting Payments<br><small class="text-muted">(Authorized)</small></th>
-                        <th>Approved<br><small class="text-muted">(Scheduled)</small></th>
-                        <th>Net Req.</th>
+                        <th class="text-right">Cash in Hand<br><small class="text-muted">(Balance)</small></th>
+                        <th class="text-right">Awaiting Payments<br><small class="text-muted">(Authorized)</small></th>
+                        <th class="text-right">Approved<br><small class="text-muted">(Scheduled)</small></th>
+                        <th class="text-right">Net Req.</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -27,16 +27,16 @@
                                     @<?= e($u['username']) ?>
                                 </div>
                             </td>
-                            <td data-label="Cash in Hand" style="font-weight: 600; color: var(--primary);">
+                            <td data-label="Cash in Hand" class="text-right" style="font-weight: 600; color: var(--primary);">
                                 <?= money($u['balance']) ?>
                             </td>
-                            <td data-label="Awaiting Payments" style="color: var(--orange);">
+                            <td data-label="Awaiting Payments" class="text-right" style="color: var(--orange);">
                                 <?= money($u['authorized_amount']) ?>
                             </td>
-                            <td data-label="Approved" class="muted">
+                            <td data-label="Approved" class="text-right muted">
                                 <?= money($u['pending_amount']) ?>
                             </td>
-                            <td data-label="Net Requirement">
+                            <td data-label="Net Requirement" class="text-right">
                                 <?php if ($net > 0): ?>
                                     <span style="color: var(--red); font-weight: 600;">+ <?= money($net) ?></span>
                                 <?php else: ?>
@@ -106,7 +106,7 @@
                             <th>Date</th>
                             <th>From (1.c)</th>
                             <th>To (1.b)</th>
-                            <th>Amount</th>
+                            <th class="text-right">Amount</th>
                             <th>Reference</th>
                         </tr>
                     </thead>
@@ -119,7 +119,7 @@
                                     <td data-label="Date"><?= fdate($t['created_at'], 'd M Y H:i') ?></td>
                                     <td data-label="From"><?= e($t['from_name']) ?></td>
                                     <td data-label="To"><?= e($t['to_name']) ?></td>
-                                    <td data-label="Amount" style="font-weight: 600; color: var(--success);">
+                                    <td data-label="Amount" class="text-right" style="font-weight: 600; color: var(--success);">
                                         <?= money($t['amount']) ?>
                                     </td>
                                     <td data-label="Reference" class="muted"><?= e($t['reference']) ?></td>

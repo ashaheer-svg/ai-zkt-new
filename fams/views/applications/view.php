@@ -227,7 +227,7 @@
         <td data-label="Age"><?= $c['age']?:'—' ?></td>
         <td data-label="Gender"><?= ucfirst($c['gender']?:'—') ?></td>
         <td data-label="Occupation"><?= e($c['occupation']?:'—') ?></td>
-        <td data-label="Income"><?= $c['income'] > 0 ? money($c['income']) : '—' ?></td>
+        <td data-label="Income" class="text-right"><?= $c['income'] > 0 ? money($c['income']) : '—' ?></td>
       </tr>
       <?php endforeach; ?>
     </tbody></table></div>
@@ -345,13 +345,13 @@
   <div class="card">
     <div class="card-title">💰 Disbursement Schedule</div>
     <div class="table-wrap"><table class="table-card">
-      <thead><tr><th>#</th><th>Due Date</th><th>Amount</th><th>Status</th><th>Authorized By</th><th>Date</th><th>Notes</th><th>Action</th></tr></thead>
+      <thead><tr><th>#</th><th>Due Date</th><th class="text-right">Amount</th><th>Status</th><th>Authorized By</th><th>Date</th><th>Notes</th><th>Action</th></tr></thead>
       <tbody>
         <?php foreach ($disbursements as $d): ?>
         <tr>
           <td data-label="#"><?= $d['installment_no'] ?></td>
           <td data-label="Due"><?= $d['due_date'] ? fdate($d['due_date']) : '—' ?></td>
-          <td data-label="Amount"><strong><?= money($d['amount']) ?></strong></td>
+          <td data-label="Amount" class="text-right"><strong><?= money($d['amount']) ?></strong></td>
           <td data-label="Status"><?= disb_badge($d['status']) ?></td>
           <td data-label="Auth By" class="muted"><?= e($d['auth_name'] ?? '—') ?></td>
           <td data-label="Auth Date" class="muted"><?= $d['authorized_at'] ? fdate($d['authorized_at']) : '—' ?></td>

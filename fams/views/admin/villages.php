@@ -22,14 +22,14 @@ if ($action==='edit' && isset($_GET['id'])) { $s=$pdo->prepare("SELECT * FROM vi
 </div>
 
 <div class="card" style="padding:0"><div class="table-wrap"><table class="table-card">
-  <thead><tr><th>Village</th><th>Thackiya</th><th>Allocation</th><th>Projects</th><th>Status</th><th>Actions</th></tr></thead>
+  <thead><tr><th>Village</th><th>Thackiya</th><th class="text-right">Allocation</th><th class="text-right">Projects</th><th>Status</th><th>Actions</th></tr></thead>
   <tbody>
     <?php foreach ($villages as $v): ?>
     <tr>
       <td data-label="Village"><strong><?= e($v['name']) ?></strong></td>
       <td data-label="Thackiya" class="muted"><?= e($v['district']?:'—') ?></td>
-      <td data-label="Allocation"><?= money((float)$v['allocation_amount']) ?></td>
-      <td data-label="Projects"><?= $v['applicant_count'] ?></td>
+      <td data-label="Allocation" class="text-right"><?= money((float)$v['allocation_amount']) ?></td>
+      <td data-label="Projects" class="text-right"><?= $v['applicant_count'] ?></td>
       <td data-label="Status"><?= $v['is_active']?'<span class="badge badge-green">Active</span>':'<span class="badge badge-red">Inactive</span>' ?></td>
       <td data-label="Actions"><div class="btn-group">
         <a href="index.php?page=admin.villages&action=edit&id=<?= $v['id'] ?>" class="btn btn-outline btn-sm">Edit</a>

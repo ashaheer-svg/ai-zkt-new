@@ -40,7 +40,7 @@
       <thead>
         <tr>
           <th>#</th><th>Applicant</th><th>Village</th><th>Category</th>
-          <th>Amount</th><th>Status</th><th>Created By</th><th>Date</th><th>Action</th>
+          <th class="text-right">Amount</th><th>Status</th><th>Created By</th><th>Date</th><th>Action</th>
         </tr>
       </thead>
       <tbody>
@@ -53,7 +53,7 @@
           <td data-label="Applicant"><strong><?= e($a['applicant_name']) ?></strong><br><span class="text-small text-muted"><?= e($a['id_number'] ?? '') ?></span></td>
           <td data-label="Village"><?= e($a['village_name']) ?><br><span class="text-tiny muted"><?= e($a['village_district'] ?: '') ?></span></td>
           <td data-label="Category"><?= e($a['category_name']) ?></td>
-          <td data-label="Amount">
+          <td data-label="Amount" class="text-right">
             <?php 
               $totalApproved = ($a['disbursement_amount'] ?? 0) * ($a['disbursement_count'] ?? 0);
               $showApproved = in_array($a['status'], [STATUS_APPROVED, 'disbursing', STATUS_ON_HOLD]) && $totalApproved > 0;
