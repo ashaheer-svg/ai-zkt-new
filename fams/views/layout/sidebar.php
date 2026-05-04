@@ -50,7 +50,9 @@ if ($role === ROLE_SYSADMIN) {
 ?>
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-brand">
-      <div class="brand-icon">N</div>
+      <div class="brand-logo">
+        <img src="assets/img/logo.png" alt="Logo" onerror="this.parentElement.innerHTML='<div class=\'brand-icon\'>N</div>'">
+      </div>
       <div class="brand-text">
         <span class="brand-name"><?= APP_SHORT ?></span>
         <span class="brand-sub">v<?= APP_VERSION ?></span>
@@ -98,9 +100,6 @@ if ($role === ROLE_SYSADMIN) {
   <main class="main-content" id="mainContent">
     <div class="page-header">
       <h1 class="page-title"><?= e($pageTitle ?? '') ?></h1>
-      <div class="header-logo">
-        <img src="assets/img/logo.png" alt="NCT Logo" onerror="this.style.display='none'">
-      </div>
     </div>
     <div class="flash-messages">
       <?= flash_html() ?>
