@@ -15,7 +15,7 @@ $isEdit = $isEdit ?? false;
   <div class="lang-select-group">
     <label>🌐 Language of Entry:</label>
     <select name="input_language" id="input_language">
-      <?php $currentLang = $d['input_language'] ?? $app['input_language'] ?? $applicant['input_language'] ?? 'en'; ?>
+      <?php $currentLang = $d['input_language'] ?? ($app['input_language'] ?? null) ?? ($applicant['input_language'] ?? null) ?? 'en'; ?>
       <option value="en"  <?= $currentLang === 'en' ? 'selected' : '' ?>>English</option>
       <option value="ta"  <?= $currentLang === 'ta' ? 'selected' : '' ?>>தமிழ் (Tamil)</option>
       <option value="si"  <?= $currentLang === 'si' ? 'selected' : '' ?>>සිංහල (Sinhala)</option>

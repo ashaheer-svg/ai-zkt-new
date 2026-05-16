@@ -87,7 +87,7 @@ class Logger
     public function getTimeline(int $applicationId): array
     {
         $stmt = $this->pdo->prepare("
-            SELECT al.action, al.comment, al.created_at,
+            SELECT al.id, al.action, al.comment, al.created_at,
                    u.full_name, u.role, 'log' AS entry_type, '' AS field_name,
                    '' AS old_value, '' AS new_value
             FROM application_logs al

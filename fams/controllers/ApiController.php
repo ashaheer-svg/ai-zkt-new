@@ -196,9 +196,15 @@ class ApiController
         }
 
         // 2. Cache miss — call MyMemory free API (server-side, no CORS)
-        $langPair = ($sourceLang === 'auto' || $sourceLang === 'en')
-            ? 'ta|en'
-            : "{$sourceLang}|en";
+        // If source is already English, no translation is needed
+        if ($sourceLang === 'en') {
+            echo json_encode(['translated' => $text, 'cached' => false, 'note' => 'Source is already English']);
+            return;
+        }
+
+        // 'auto' uses MyMemory's built-in detection; specific codes pass directly
+        $srcCode  = ($sourceLang === 'auto') ? 'autodetect' : $sourceLang;
+        $langPair = "{$srcCode}|en";
 
         $apiUrl = 'https://api.mymemory.translated.net/get?q='
                 . urlencode($text)

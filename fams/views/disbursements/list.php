@@ -75,7 +75,7 @@
 </div>
 
 <script>
-function showComment(title, text, disbId) {
+function showComment(title, text, disbId, lang) {
     document.getElementById('modalTitle').innerText = title;
     const body = document.getElementById('modalBody');
     body.innerHTML = '';
@@ -88,7 +88,7 @@ function showComment(title, text, disbId) {
         wrap.setAttribute('data-table', 'disbursements');
         wrap.setAttribute('data-record-id', disbId);
         wrap.setAttribute('data-field', 'notes');
-        wrap.setAttribute('data-lang', 'ta'); // default; field notes may be any lang
+        wrap.setAttribute('data-lang', lang || 'en');
     }
     const p = document.createElement('p');
     p.setAttribute('data-source-text', '');
@@ -201,7 +201,7 @@ window.onclick = function(event) {
           </td>
           <td data-label="Notes" class="muted">
             <?php if ($d['notes']): ?>
-              <span class="note-link" onclick="showComment('Notes: Installment #<?= $d['installment_no'] ?>', '<?= e(addslashes($d['notes'])) ?>', <?= $d['id'] ?>)">View Note</span>
+              <span class="note-link" onclick="showComment('Notes: Installment #<?= $d['installment_no'] ?>', '<?= e(addslashes($d['notes'])) ?>', <?= $d['id'] ?>, '<?= e($d['app_lang'] ?? $app['input_language'] ?? 'en') ?>')">View Note</span>
             <?php else: ?>—<?php endif; ?>
           </td>
           <td data-label="Action">

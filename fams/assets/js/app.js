@@ -256,6 +256,7 @@
   initTabs();
   initCalculations();
   initTranslation();
+  initLangDetect();
 })();
 
 /* ── Translation ──────────────────────────────────────────────────────────── */
@@ -351,4 +352,96 @@ function initTranslation() {
         });
     });
   });
+}
+
+/* ── Language Auto-detection ──────────────────────────────────────────────── */
+/**
+ * Watches translatable input fields (reason_for_application, notes, comment
+ * textareas) and automatically updates the #input_language selector when
+ * Tamil or Sinhala Unicode characters are detected.
+ *
+ * Tamil   : U+0B80–U+0BFF
+ * Sinhala : U+0D80–U+0DFF
+ * Defaults to 'en' if neither script is found.
+ *
+ * Shows a small live indicator so the user sees the detected language.
+ */
+function initLangDetect() {
+  var langSelect = document.getElementById('input_language');
+  if (!langSelect) return; // only runs on create/edit forms
+
+  // Fields to watch — names that hold free-text entered by staff
+  var watchedNames = ['reason_for_application', 'notes', 'comment'];
+
+  // Build the indicator badge element once
+  var indicator = document.createElement('span');
+  indicator.id = 'lang-detect-indicator';
+  indicator.style.cssText = 'font-size:.72rem;margin-left:.75rem;padding:.15rem .5rem;border-radius:4px;transition:opacity .3s;opacity:0;font-weight:600;';
+  langSelect.parentNode.insertBefore(indicator, langSelect.nextSibling);
+
+  var debounceTimer = null;
+
+  function detectLang(text) {
+    // Count chars in each Unicode block
+    var tamilCount    = (text.match(/[\u0B80-\u0BFF]/g) || []).length;
+    var sinhalaCount  = (text.match(/[\u0D80-\u0DFF]/g) || []).length;
+    var total         = text.replace(/\s/g, '').length;
+
+    if (total === 0) return null; // empty — don't change
+
+    var tamilRatio   = tamilCount   / total;
+    var sinhalaRatio = sinhalaCount / total;
+
+    // Require at least 10% of non-space chars to be in a script to trigger
+    if (tamilRatio > 0.10)   return 'ta';
+    if (sinhalaRatio > 0.10) return 'si';
+    return 'en';
+  }
+
+  function showIndicator(lang) {
+    var labels = { ta: { text: '🟡 Tamil detected',   bg: 'rgba(251,191,36,.15)', color: '#fbbf24' },
+                   si: { text: '🟣 Sinhala detected',  bg: 'rgba(139,92,246,.15)',  color: '#a78bfa' },
+                   en: { text: '🟢 English detected',  bg: 'rgba(20,184,166,.12)',  color: '#2dd4bf' } };
+    var info = labels[lang] || labels['en'];
+    indicator.textContent      = info.text;
+    indicator.style.background = info.bg;
+    indicator.style.color      = info.color;
+    indicator.style.opacity    = '1';
+  }
+
+  function onInput(e) {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(function () {
+      var detected = detectLang(e.target.value || '');
+      if (detected && detected !== langSelect.value) {
+        langSelect.value = detected;
+        showIndicator(detected);
+        // Flash the select border to draw attention
+        langSelect.style.borderColor = detected === 'ta' ? '#fbbf24' : (detected === 'si' ? '#a78bfa' : '#2dd4bf');
+        setTimeout(function () { langSelect.style.borderColor = ''; }, 1500);
+      } else if (detected) {
+        showIndicator(detected);
+      }
+    }, 400);
+  }
+
+  // Attach to all matching textareas/inputs currently in the DOM
+  watchedNames.forEach(function (name) {
+    document.querySelectorAll('[name="' + name + '"]').forEach(function (el) {
+      el.addEventListener('input', onInput);
+      // Also run once on load so edit-form pre-fills the indicator
+      if (el.value && el.value.trim()) {
+        var detected = detectLang(el.value);
+        if (detected) showIndicator(detected);
+      }
+    });
+  });
+
+  // Update indicator whenever the select is changed manually too
+  langSelect.addEventListener('change', function () {
+    showIndicator(langSelect.value);
+  });
+
+  // Run initial indicator for the current selector value on page load
+  showIndicator(langSelect.value);
 }
