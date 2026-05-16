@@ -264,59 +264,79 @@
 function initTranslation() {
   const LANG_LABELS = { ta: 'Tamil', si: 'Sinhala', en: 'English' };
 
+  /** Detect script from raw text using Unicode block analysis. */
+  function detectScript(text) {
+    if (!text) return 'en';
+    var clean      = text.replace(/\s/g, '');
+    if (!clean.length) return 'en';
+    var tamilPct   = ((text.match(/[\u0B80-\u0BFF]/g) || []).length / clean.length);
+    var sinhalaPct = ((text.match(/[\u0D80-\u0DFF]/g) || []).length / clean.length);
+    if (tamilPct   > 0.08) return 'ta';
+    if (sinhalaPct > 0.08) return 'si';
+    return 'en';
+  }
+
   document.querySelectorAll('[data-translatable]').forEach(function (wrap) {
-    const lang      = wrap.dataset.lang   || 'en';
-    const table     = wrap.dataset.table  || '';
-    const recordId  = wrap.dataset.recordId || '';
-    const field     = wrap.dataset.field  || '';
-    const textEl    = wrap.querySelector('[data-source-text]') || wrap.firstElementChild;
+    // Skip already-initialised wrappers (important when called again for modal content)
+    if (wrap.dataset.transInit) return;
+    wrap.dataset.transInit = '1';
 
-    // Show language badge next to label (if a label exists)
-    const label = wrap.previousElementSibling;
+    var storedLang = wrap.dataset.lang  || 'en';
+    var table      = wrap.dataset.table || '';
+    var recordId   = wrap.dataset.recordId || '';
+    var field      = wrap.dataset.field || '';
+    var textEl     = wrap.querySelector('[data-source-text]') || wrap.firstElementChild;
+    var rawText    = textEl ? (textEl.dataset.rawText || textEl.textContent || '').trim() : '';
+
+    // Detect actual script from content — overrides stored lang when stored='en' but text isn't
+    var detectedLang = detectScript(rawText);
+    // Use stored lang when it's explicitly set to a non-English language; otherwise trust detection
+    var effectiveLang = (storedLang !== 'en') ? storedLang : detectedLang;
+
+    // Show language badge next to label
+    var label = wrap.previousElementSibling;
     if (label && (label.tagName === 'LABEL' || label.classList.contains('detail-label'))) {
-      const badge = document.createElement('span');
-      badge.className = 'lang-badge ' + lang;
-      badge.textContent = lang.toUpperCase();
-      badge.title = LANG_LABELS[lang] || lang;
-      label.appendChild(badge);
+      // Don't add duplicate badges
+      if (!label.querySelector('.lang-badge')) {
+        var badge = document.createElement('span');
+        badge.className = 'lang-badge ' + effectiveLang;
+        badge.textContent = effectiveLang.toUpperCase();
+        badge.title = LANG_LABELS[effectiveLang] || effectiveLang;
+        label.appendChild(badge);
+      }
     }
 
-    // Only add translate button for non-English content
-    if (lang === 'en' || !textEl || !textEl.textContent.trim() || textEl.textContent.trim() === '—') {
-      return;
-    }
+    // Only add translate button when text is non-English and non-empty
+    if (effectiveLang === 'en' || !rawText || rawText === '—') return;
 
-    const btn = document.createElement('button');
+    var btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'translate-btn';
     btn.innerHTML = '🌐 Translate to English';
     wrap.appendChild(btn);
 
     btn.addEventListener('click', function () {
-      const text = (textEl.dataset.rawText || textEl.textContent || '').trim();
+      var text = rawText;
       if (!text) return;
 
-      // Show loading state
       btn.disabled = true;
       btn.innerHTML = '<span class="translate-spinner"></span> Translating…';
 
-      // Remove any previous result/error
-      const existing = wrap.querySelector('.translation-result, .translation-error');
+      var existing = wrap.querySelector('.translation-result, .translation-error');
       if (existing) existing.remove();
 
-      // POST to PHP proxy
-      const fd = new FormData();
-      fd.append('table',      table);
-      fd.append('record_id',  recordId);
-      fd.append('field',      field);
-      fd.append('source_lang', lang);
-      fd.append('text',       text);
+      var fd = new FormData();
+      fd.append('table',       table);
+      fd.append('record_id',   recordId);
+      fd.append('field',       field);
+      fd.append('source_lang', effectiveLang);   // use resolved lang, not raw 'en'
+      fd.append('text',        text);
 
       fetch('index.php?page=api.translate', { method: 'POST', body: fd })
         .then(function (r) { return r.json(); })
         .then(function (data) {
           if (data.error) {
-            const err = document.createElement('div');
+            var err = document.createElement('div');
             err.className = 'translation-error';
             err.textContent = '⚠ ' + data.error;
             wrap.appendChild(err);
@@ -325,14 +345,14 @@ function initTranslation() {
             return;
           }
 
-          const box = document.createElement('div');
+          var box = document.createElement('div');
           box.className = 'translation-result';
 
-          const lbl = document.createElement('div');
+          var lbl = document.createElement('div');
           lbl.className = 'translation-result-label';
           lbl.textContent = (data.cached ? '📋 Cached' : '🌐 Translated') + ' · English';
 
-          const txt = document.createElement('div');
+          var txt = document.createElement('div');
           txt.textContent = data.translated;
 
           box.appendChild(lbl);
@@ -343,7 +363,7 @@ function initTranslation() {
           btn.innerHTML = '✅ Translated';
         })
         .catch(function () {
-          const err = document.createElement('div');
+          var err = document.createElement('div');
           err.className = 'translation-error';
           err.textContent = '⚠ Translation service unavailable. Please try again.';
           wrap.appendChild(err);
