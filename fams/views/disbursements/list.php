@@ -75,10 +75,31 @@
 </div>
 
 <script>
-function showComment(title, text) {
+function showComment(title, text, disbId) {
     document.getElementById('modalTitle').innerText = title;
-    document.getElementById('modalBody').innerText = text;
+    const body = document.getElementById('modalBody');
+    body.innerHTML = '';
+
+    // Build translatable wrapper
+    const wrap = document.createElement('div');
+    wrap.className = 'translatable-wrap';
+    if (disbId) {
+        wrap.setAttribute('data-translatable', '');
+        wrap.setAttribute('data-table', 'disbursements');
+        wrap.setAttribute('data-record-id', disbId);
+        wrap.setAttribute('data-field', 'notes');
+        wrap.setAttribute('data-lang', 'ta'); // default; field notes may be any lang
+    }
+    const p = document.createElement('p');
+    p.setAttribute('data-source-text', '');
+    p.style.whiteSpace = 'pre-wrap';
+    p.textContent = text;
+    wrap.appendChild(p);
+    body.appendChild(wrap);
+
     document.getElementById('commentModal').style.display = 'flex';
+    // Re-run translation init for the dynamically injected content
+    if (disbId && typeof initTranslation === 'function') initTranslation();
 }
 function closeCommentModal() {
     document.getElementById('commentModal').style.display = 'none';
@@ -180,7 +201,7 @@ window.onclick = function(event) {
           </td>
           <td data-label="Notes" class="muted">
             <?php if ($d['notes']): ?>
-              <span class="note-link" onclick="showComment('Notes: Installment #<?= $d['installment_no'] ?>', '<?= e(addslashes($d['notes'])) ?>')">View Note</span>
+              <span class="note-link" onclick="showComment('Notes: Installment #<?= $d['installment_no'] ?>', '<?= e(addslashes($d['notes'])) ?>', <?= $d['id'] ?>)">View Note</span>
             <?php else: ?>—<?php endif; ?>
           </td>
           <td data-label="Action">

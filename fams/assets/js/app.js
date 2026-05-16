@@ -255,4 +255,100 @@
   initDependants();
   initTabs();
   initCalculations();
+  initTranslation();
 })();
+
+/* ── Translation ──────────────────────────────────────────────────────────── */
+/* Runs outside the main IIFE so it can be called from inline scripts too.   */
+function initTranslation() {
+  const LANG_LABELS = { ta: 'Tamil', si: 'Sinhala', en: 'English' };
+
+  document.querySelectorAll('[data-translatable]').forEach(function (wrap) {
+    const lang      = wrap.dataset.lang   || 'en';
+    const table     = wrap.dataset.table  || '';
+    const recordId  = wrap.dataset.recordId || '';
+    const field     = wrap.dataset.field  || '';
+    const textEl    = wrap.querySelector('[data-source-text]') || wrap.firstElementChild;
+
+    // Show language badge next to label (if a label exists)
+    const label = wrap.previousElementSibling;
+    if (label && (label.tagName === 'LABEL' || label.classList.contains('detail-label'))) {
+      const badge = document.createElement('span');
+      badge.className = 'lang-badge ' + lang;
+      badge.textContent = lang.toUpperCase();
+      badge.title = LANG_LABELS[lang] || lang;
+      label.appendChild(badge);
+    }
+
+    // Only add translate button for non-English content
+    if (lang === 'en' || !textEl || !textEl.textContent.trim() || textEl.textContent.trim() === '—') {
+      return;
+    }
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'translate-btn';
+    btn.innerHTML = '🌐 Translate to English';
+    wrap.appendChild(btn);
+
+    btn.addEventListener('click', function () {
+      const text = (textEl.dataset.rawText || textEl.textContent || '').trim();
+      if (!text) return;
+
+      // Show loading state
+      btn.disabled = true;
+      btn.innerHTML = '<span class="translate-spinner"></span> Translating…';
+
+      // Remove any previous result/error
+      const existing = wrap.querySelector('.translation-result, .translation-error');
+      if (existing) existing.remove();
+
+      // POST to PHP proxy
+      const fd = new FormData();
+      fd.append('table',      table);
+      fd.append('record_id',  recordId);
+      fd.append('field',      field);
+      fd.append('source_lang', lang);
+      fd.append('text',       text);
+
+      fetch('index.php?page=api.translate', { method: 'POST', body: fd })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          if (data.error) {
+            const err = document.createElement('div');
+            err.className = 'translation-error';
+            err.textContent = '⚠ ' + data.error;
+            wrap.appendChild(err);
+            btn.disabled = false;
+            btn.innerHTML = '🌐 Translate to English';
+            return;
+          }
+
+          const box = document.createElement('div');
+          box.className = 'translation-result';
+
+          const lbl = document.createElement('div');
+          lbl.className = 'translation-result-label';
+          lbl.textContent = (data.cached ? '📋 Cached' : '🌐 Translated') + ' · English';
+
+          const txt = document.createElement('div');
+          txt.textContent = data.translated;
+
+          box.appendChild(lbl);
+          box.appendChild(txt);
+          wrap.appendChild(box);
+
+          btn.className = 'translate-btn done';
+          btn.innerHTML = '✅ Translated';
+        })
+        .catch(function () {
+          const err = document.createElement('div');
+          err.className = 'translation-error';
+          err.textContent = '⚠ Translation service unavailable. Please try again.';
+          wrap.appendChild(err);
+          btn.disabled = false;
+          btn.innerHTML = '🌐 Translate to English';
+        });
+    });
+  });
+}

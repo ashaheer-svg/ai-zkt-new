@@ -131,13 +131,14 @@ class ApplicationController
 
                 // 1. Insert Applicant Profile
                 $stmt = $pdo->prepare("INSERT INTO applicants
-                    (full_name,address,gender,age,id_number,telephone,telephone_home,village_id,marital_status,residency_status,occupation,employer_details,notes)
-                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)");
+                    (full_name,address,gender,age,id_number,telephone,telephone_home,village_id,marital_status,residency_status,occupation,employer_details,notes,input_language)
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
                 $stmt->execute([
                     $d['full_name'], $d['address'] ?? '', $d['gender'],
                     $d['age'] ?: null, $d['id_number'] ?? '', $d['telephone'] ?? '', $d['telephone_home'] ?? '',
                     $d['village_id'], $d['marital_status'] ?? null, $d['residency_status'] ?? null,
-                    $d['occupation'] ?? '', $d['employer_details'] ?? '', $d['notes'] ?? ''
+                    $d['occupation'] ?? '', $d['employer_details'] ?? '', $d['notes'] ?? '',
+                    $d['input_language'] ?? 'en'
                 ]);
                 $applicantId = (int)$pdo->lastInsertId();
 
@@ -170,12 +171,13 @@ class ApplicationController
                 $stmt = $pdo->prepare("INSERT INTO applications
                     (applicant_id,fund_category_id,amount_requested,status,is_valid,created_by,
                      requested_type,requested_installment,requested_count,
-                     reason_for_application,applied_other_funds,expected_date)
-                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?)");
+                     reason_for_application,applied_other_funds,expected_date,input_language)
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)");
                 $stmt->execute([
                     $applicantId, $d['fund_category_id'], $d['amount_requested'], $status, $isValid, $auth->id(),
                     $d['requested_type'] ?? null, $d['requested_installment'] ?? null, $d['requested_count'] ?? null,
-                    $d['reason_for_application'] ?? '', $d['applied_other_funds'] ?? '', $d['expected_date'] ?: null
+                    $d['reason_for_application'] ?? '', $d['applied_other_funds'] ?? '', $d['expected_date'] ?: null,
+                    $d['input_language'] ?? 'en'
                 ]);
                 $appId = (int)$pdo->lastInsertId();
 
@@ -309,21 +311,39 @@ class ApplicationController
                 // 3. Update DB Records
                 $pdo->prepare("UPDATE applicants SET 
                     full_name=?, address=?, gender=?, age=?, id_number=?, telephone=?, telephone_home=?, 
-                    marital_status=?, residency_status=?, occupation=?, employer_details=?, notes=? 
+                    marital_status=?, residency_status=?, occupation=?, employer_details=?, notes=?,
+                    input_language=?
                     WHERE id=?")
                     ->execute([
                         $d['full_name'],$d['address']??'',$d['gender'],$d['age']?:null,$d['id_number']??'',$d['telephone']??'',$d['telephone_home']??'',
-                        $d['marital_status']??null,$d['residency_status']??null,$d['occupation']??'',$d['employer_details']??'',$d['notes']??'',$app['applicant_id']
+                        $d['marital_status']??null,$d['residency_status']??null,$d['occupation']??'',$d['employer_details']??'',$d['notes']??'',
+                        $d['input_language'] ?? ($applicant['input_language'] ?? 'en'),
+                        $app['applicant_id']
                     ]);
                 
                 $pdo->prepare("UPDATE applications SET 
                     fund_category_id=?, amount_requested=?, status=?, is_valid=?, requested_type=?, requested_installment=?, requested_count=?, 
-                    reason_for_application=?, applied_other_funds=?, expected_date=?, updated_at=CURRENT_TIMESTAMP 
+                    reason_for_application=?, applied_other_funds=?, expected_date=?, input_language=?, updated_at=CURRENT_TIMESTAMP 
                     WHERE id=?")
                     ->execute([
                         $d['fund_category_id'],$d['amount_requested'],$status,$isValid,$d['requested_type']??null,$d['requested_installment']??null,$d['requested_count']??null,
-                        $d['reason_for_application']??'',$d['applied_other_funds']??'',$d['expected_date']?:null,$id
+                        $d['reason_for_application']??'',$d['applied_other_funds']??'',$d['expected_date']?:null,
+                        $d['input_language'] ?? ($app['input_language'] ?? 'en'),
+                        $id
                     ]);
+
+                // 3a. Invalidate translation cache for any changed translatable fields
+                $translatableFields = ['reason_for_application' => 'applications', 'notes' => 'applicants'];
+                foreach ($translatableFields as $tf => $tbl) {
+                    $srcVal = ($tbl === 'applications') ? ($app[$tf] ?? '') : ($applicant[$tf] ?? '');
+                    $newVal = $d[$tf] ?? '';
+                    $rid    = ($tbl === 'applications') ? $id : $app['applicant_id'];
+                    if ($srcVal !== $newVal) {
+                        $pdo->prepare(
+                            "DELETE FROM translation_cache WHERE table_name=? AND record_id=? AND field_name=?"
+                        )->execute([$tbl, $rid, $tf]);
+                    }
+                }
 
                 // 4. Refresh Dependants (Wipe and re-insert for simplicity)
                 $pdo->prepare("DELETE FROM applicant_dependants WHERE applicant_id=?")->execute([$app['applicant_id']]);

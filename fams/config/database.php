@@ -170,6 +170,17 @@ function _migrate(PDO $pdo): void
     if (!in_array('income', $colsDep)) {
         $pdo->exec("ALTER TABLE applicant_dependants ADD COLUMN income REAL DEFAULT 0");
     }
+
+    // --- Trilingual Support ---
+    // Track which language was used during data entry (ta=Tamil, si=Sinhala, en=English)
+    $colsApp2 = $pdo->query("PRAGMA table_info(applications)")->fetchAll(PDO::FETCH_COLUMN, 1);
+    if (!in_array('input_language', $colsApp2)) {
+        $pdo->exec("ALTER TABLE applications ADD COLUMN input_language TEXT DEFAULT 'en'");
+    }
+    $colsApplicant2 = $pdo->query("PRAGMA table_info(applicants)")->fetchAll(PDO::FETCH_COLUMN, 1);
+    if (!in_array('input_language', $colsApplicant2)) {
+        $pdo->exec("ALTER TABLE applicants ADD COLUMN input_language TEXT DEFAULT 'en'");
+    }
 }
 
 /**
@@ -400,6 +411,20 @@ function _createSchema(PDO $pdo): void
             name       TEXT NOT NULL UNIQUE,
             is_active  INTEGER DEFAULT 1,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        );
+
+        -- Universal Translation Cache
+        -- Stores English translations keyed by (table, record_id, field_name).
+        -- Populated on first translate request; subsequent reads are instant (DB only).
+        CREATE TABLE IF NOT EXISTS translation_cache (
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            table_name      TEXT NOT NULL,
+            record_id       INTEGER NOT NULL,
+            field_name      TEXT NOT NULL,
+            source_lang     TEXT NOT NULL DEFAULT 'auto',
+            translated_text TEXT NOT NULL,
+            translated_at   DATETIME DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE (table_name, record_id, field_name)
         );
     ");
 }

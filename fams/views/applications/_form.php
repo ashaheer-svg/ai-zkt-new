@@ -11,7 +11,18 @@ $isEdit = $isEdit ?? false;
 <form method="POST" action="index.php?page=<?= $isEdit ? 'applications.edit&id='.$appId : 'applications.create' ?>" enctype="multipart/form-data">
   <?= csrf_field() ?>
 
-  <!-- Applicant Details -->
+  <!-- Language of Entry -->
+  <div class="lang-select-group">
+    <label>🌐 Language of Entry:</label>
+    <select name="input_language" id="input_language">
+      <?php $currentLang = $d['input_language'] ?? $app['input_language'] ?? $applicant['input_language'] ?? 'en'; ?>
+      <option value="en"  <?= $currentLang === 'en' ? 'selected' : '' ?>>English</option>
+      <option value="ta"  <?= $currentLang === 'ta' ? 'selected' : '' ?>>தமிழ் (Tamil)</option>
+      <option value="si"  <?= $currentLang === 'si' ? 'selected' : '' ?>>සිංහල (Sinhala)</option>
+    </select>
+    <small style="color:var(--text-dim);font-size:.75rem">Select the language used to fill this form — this enables translation for reviewers.</small>
+  </div>
+
   <div class="form-section">
     <div class="form-section-title">👤 Applicant Details</div>
     <div class="form-grid">

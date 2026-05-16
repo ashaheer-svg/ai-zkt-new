@@ -147,4 +147,94 @@ class ApiController
             echo json_encode(['error' => 'Upload failed', 'details' => $result['errors']]);
         }
     }
+
+    /**
+     * Translation Proxy with Persistent DB Cache.
+     * 
+     * Checks translation_cache first (instant return on hit).
+     * On cache miss, calls MyMemory free translation API server-side
+     * (avoids CORS issues) and stores the result permanently.
+     * 
+     * Expects POST: table, record_id, field, source_lang, text
+     * Returns JSON: { translated: string, cached: bool }
+     * 
+     * @param PDO  $pdo  The database connection instance.
+     * @param Auth $auth The authentication service.
+     * @return void
+     */
+    public static function translate(PDO $pdo, Auth $auth): void
+    {
+        // Session-authenticated (no Bearer token needed)
+        $auth->requireLogin();
+        header('Content-Type: application/json');
+
+        $tableName  = trim($_POST['table']      ?? '');
+        $recordId   = (int)($_POST['record_id'] ?? 0);
+        $fieldName  = trim($_POST['field']      ?? '');
+        $sourceLang = trim($_POST['source_lang'] ?? 'auto');
+        $text       = trim($_POST['text']       ?? '');
+
+        // Only allow known tables to prevent SQL injection
+        $allowedTables = ['applications', 'applicants', 'application_logs', 'disbursements'];
+        if (!in_array($tableName, $allowedTables) || !$recordId || !$fieldName || $text === '') {
+            http_response_code(400);
+            echo json_encode(['error' => 'Invalid parameters']);
+            return;
+        }
+
+        // 1. Check translation_cache (zero API cost on hit)
+        $cacheStmt = $pdo->prepare(
+            "SELECT translated_text FROM translation_cache
+             WHERE table_name=? AND record_id=? AND field_name=? LIMIT 1"
+        );
+        $cacheStmt->execute([$tableName, $recordId, $fieldName]);
+        $cached = $cacheStmt->fetchColumn();
+
+        if ($cached !== false) {
+            echo json_encode(['translated' => $cached, 'cached' => true]);
+            return;
+        }
+
+        // 2. Cache miss — call MyMemory free API (server-side, no CORS)
+        $langPair = ($sourceLang === 'auto' || $sourceLang === 'en')
+            ? 'ta|en'
+            : "{$sourceLang}|en";
+
+        $apiUrl = 'https://api.mymemory.translated.net/get?q='
+                . urlencode($text)
+                . '&langpair=' . urlencode($langPair);
+
+        $ctx = stream_context_create([
+            'http' => [
+                'timeout' => 8,
+                'header'  => "User-Agent: FAMS-NCT/1.0\r\n",
+            ]
+        ]);
+
+        $response = @file_get_contents($apiUrl, false, $ctx);
+
+        if ($response === false) {
+            http_response_code(503);
+            echo json_encode(['error' => 'Translation service unavailable']);
+            return;
+        }
+
+        $data       = json_decode($response, true);
+        $translated = $data['responseData']['translatedText'] ?? null;
+
+        if (!$translated || ($data['responseStatus'] ?? '') != 200) {
+            http_response_code(502);
+            echo json_encode(['error' => 'Translation failed', 'detail' => $data['responseDetails'] ?? '']);
+            return;
+        }
+
+        // 3. Persist to cache — INSERT OR REPLACE invalidates stale cache on edit
+        $pdo->prepare(
+            "INSERT OR REPLACE INTO translation_cache
+             (table_name, record_id, field_name, source_lang, translated_text, translated_at)
+             VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)"
+        )->execute([$tableName, $recordId, $fieldName, $sourceLang, $translated]);
+
+        echo json_encode(['translated' => $translated, 'cached' => false]);
+    }
 }

@@ -209,7 +209,14 @@
       <?php if ($applicant['notes']): ?>
       <div class="detail-item full">
         <div class="detail-label">Internal Notes</div>
-        <div class="detail-value"><?= e($applicant['notes']) ?></div>
+        <div class="translatable-wrap"
+             data-translatable
+             data-table="applicants"
+             data-record-id="<?= $applicant['id'] ?>"
+             data-field="notes"
+             data-lang="<?= e($applicant['input_language'] ?? 'en') ?>">
+          <div class="detail-value" data-source-text><?= e($applicant['notes']) ?></div>
+        </div>
         <div class="text-tiny muted mt-1">Recorded by <?= e($app['creator_name'] ?? 'System') ?></div>
       </div>
       <?php endif; ?>
@@ -247,7 +254,14 @@
       <div class="detail-item"><div class="detail-label">Other Fund Applications</div><div class="detail-value"><?= ucfirst(e($app['applied_other_funds'] ?: 'no')) ?></div></div>
       <div class="detail-item full">
         <div class="detail-label">Reason for Application</div>
-        <div class="detail-value" style="white-space:pre-wrap"><?= e($app['reason_for_application'] ?: '—') ?></div>
+        <div class="translatable-wrap"
+             data-translatable
+             data-table="applications"
+             data-record-id="<?= $app['id'] ?>"
+             data-field="reason_for_application"
+             data-lang="<?= e($app['input_language'] ?? 'en') ?>">
+          <div class="detail-value" style="white-space:pre-wrap" data-source-text><?= e($app['reason_for_application'] ?: '—') ?></div>
+        </div>
         <div class="text-tiny muted mt-1">Submitted by <?= e($app['creator_name'] ?? 'System') ?> on <?= fdate($app['created_at']) ?></div>
       </div>
     </div>
@@ -331,7 +345,16 @@
         <div class="timeline-dot <?= $t['action']==='advisory_comment'?'advisory':($t['action']==='rejected'?'rejected':'') ?>"></div>
         <div class="timeline-meta"><?= fdate($t['created_at'],'d M Y H:i') ?> — <?= e($t['full_name']) ?> (<?= role_label($t['role']) ?>)</div>
         <div class="timeline-action"><?= e(str_replace('_',' ',$t['action'])) ?></div>
-        <?php if ($t['comment']): ?><div class="timeline-comment">"<?= e($t['comment']) ?>"</div><?php endif; ?>
+        <?php if ($t['comment']): ?>
+        <div class="translatable-wrap"
+             data-translatable
+             data-table="application_logs"
+             data-record-id="<?= $t['id'] ?>"
+             data-field="comment"
+             data-lang="<?= e($app['input_language'] ?? 'en') ?>">
+          <div class="timeline-comment" data-source-text>"<?= e($t['comment']) ?>"</div>
+        </div>
+        <?php endif; ?>
       </div>
       <?php endforeach; ?>
     </div>
@@ -355,7 +378,16 @@
           <td data-label="Status"><?= disb_badge($d['status']) ?></td>
           <td data-label="Auth By" class="muted"><?= e($d['auth_name'] ?? '—') ?></td>
           <td data-label="Auth Date" class="muted"><?= $d['authorized_at'] ? fdate($d['authorized_at']) : '—' ?></td>
-          <td data-label="Notes" class="muted"><?= e($d['notes'] ?? '') ?></td>
+          <td data-label="Notes" class="muted">
+            <div class="translatable-wrap"
+                 data-translatable
+                 data-table="disbursements"
+                 data-record-id="<?= $d['id'] ?>"
+                 data-field="notes"
+                 data-lang="<?= e($app['input_language'] ?? 'en') ?>">
+              <span data-source-text><?= e($d['notes'] ?? '') ?></span>
+            </div>
+          </td>
           <td data-label="Action">
             <?php if ($d['status']===DISB_PENDING && $auth->hasRole(ROLE_OVERALL_INCHARGE)): ?>
             <a href="index.php?page=disbursements.authorize&id=<?= $d['id'] ?>" class="btn btn-warning btn-sm">Authorize</a>

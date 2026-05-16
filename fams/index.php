@@ -154,6 +154,9 @@ match (true) {
     $page === 'api.document-types' => ApiController::documentTypes($pdo, $auth),
     $page === 'api.upload'         => ApiController::upload($pdo, $auth, $logger),
 
+    // Translation Proxy (Session Authenticated — caches result in DB)
+    $page === 'api.translate'      => ApiController::translate($pdo, $auth),
+
     // 404 Handler
     default => (function() {
         http_response_code(404);
