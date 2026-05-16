@@ -210,19 +210,51 @@ class ApiController
                 . urlencode($text)
                 . '&langpair=' . urlencode($langPair);
 
-        $ctx = stream_context_create([
-            'http' => [
-                'timeout' => 8,
-                'header'  => "User-Agent: FAMS-NCT/1.0\r\n",
-            ]
-        ]);
+        // --- HTTP call: cURL preferred, file_get_contents fallback ---
+        $response = false;
+        $curlError = '';
 
-        $response = @file_get_contents($apiUrl, false, $ctx);
+        if (function_exists('curl_init')) {
+            $ch = curl_init($apiUrl);
+            curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_TIMEOUT        => 10,
+                CURLOPT_CONNECTTIMEOUT => 5,
+                CURLOPT_USERAGENT      => 'FAMS-NCT/1.0',
+                CURLOPT_SSL_VERIFYPEER => true,
+                CURLOPT_FOLLOWLOCATION => true,
+            ]);
+            $response  = curl_exec($ch);
+            $curlError = curl_error($ch);
+            $httpCode  = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
 
-        if ($response === false) {
-            http_response_code(503);
-            echo json_encode(['error' => 'Translation service unavailable']);
-            return;
+            if ($response === false || $httpCode !== 200) {
+                http_response_code(503);
+                echo json_encode([
+                    'error'  => 'Translation service unavailable',
+                    'detail' => $curlError ?: "HTTP $httpCode from translation API",
+                ]);
+                return;
+            }
+        } else {
+            // Fallback: file_get_contents (requires allow_url_fopen = On)
+            $ctx = stream_context_create([
+                'http' => [
+                    'timeout' => 10,
+                    'header'  => "User-Agent: FAMS-NCT/1.0\r\n",
+                ]
+            ]);
+            $response = @file_get_contents($apiUrl, false, $ctx);
+
+            if ($response === false) {
+                http_response_code(503);
+                echo json_encode([
+                    'error'  => 'Translation service unavailable',
+                    'detail' => 'cURL is not available and allow_url_fopen is disabled on this server.',
+                ]);
+                return;
+            }
         }
 
         $data       = json_decode($response, true);

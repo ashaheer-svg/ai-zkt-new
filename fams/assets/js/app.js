@@ -338,7 +338,7 @@ function initTranslation() {
           if (data.error) {
             var err = document.createElement('div');
             err.className = 'translation-error';
-            err.textContent = '⚠ ' + data.error;
+            err.textContent = '⚠ ' + data.error + (data.detail ? ' — ' + data.detail : '');
             wrap.appendChild(err);
             btn.disabled = false;
             btn.innerHTML = '🌐 Translate to English';
